@@ -1,0 +1,43 @@
+[package]
+name = "tegmine-common"
+description = "common module"
+version = { workspace = true }
+authors = { workspace = true }
+license = { workspace = true }
+publish = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+
+# Rust patterns
+anyhow = { workspace = true }
+lazy_static = { workspace = true }
+thiserror = { workspace = true }
+once_cell = { workspace = true }
+ordered-float = { workspace = true }
+paste = { workspace = true }
+
+# Asynchronous 
+crossbeam-channel = "0.5"
+
+# Concurrent
+parking_lot = { workspace = true }
+
+# Data structures 
+either = "1.8.0"
+
+# Development tools
+jsonpath_lib = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+strum = { workspace = true }
+strum_macros = { workspace = true }
+
+# Development tools 
+log = { workspace = true }
+
+# Text processing 
+smartstring = { workspace = true }
+
+# Value formatting 
+numtoa = { workspace = true }

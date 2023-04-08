@@ -1,0 +1,51 @@
+[package]
+name = "tegmine-core"
+description = "core module"
+version = { workspace = true }
+authors = { workspace = true }
+license = { workspace = true }
+publish = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+tegmine-common = { path = "../tegmine-common" }
+
+# Rust patterns
+lazy_static = { workspace = true }
+once_cell = { workspace = true }
+
+# Asynchronous 
+crossbeam-channel = { workspace = true }
+
+
+# Data structures
+dashmap = { workspace = true }
+either = "1.8.0"
+
+# Date and time
+chrono = { workspace = true }
+chrono-tz = { workspace = true }
+
+
+# Development tools 
+env_logger = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+strum = { workspace = true }
+strum_macros = { workspace = true }
+thread_local = { workspace = true }
+
+# Encoding data
+base58 = { workspace = true }
+
+# Script Language
+rhai = { workspace = true }
+
+# Text processing  
+bstr = { workspace = true }
+regex = { workspace = true }
+smartstring = { workspace = true }
+
+# Value formatting 
+numtoa = { workspace = true }
+uuid = { workspace = true }

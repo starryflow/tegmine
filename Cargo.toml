@@ -1,0 +1,205 @@
+[workspace.package]
+version = "0.1.0"
+description = ""
+authors = ["Starryflow <opensource@starryflow.com>"]
+license = "Apache-2.0"
+publish = false
+edition = "2021"
+
+[workspace]
+members = ["tegmine-common/", "tegmine-core/"]
+
+
+[workspace.dependencies]
+
+# Rust patterns
+anyhow = "1.0.58"
+assert_matches = "1.5.0"
+assert-impl = "0.1"
+downcast-rs = "1.2.0"
+dyn-clone = "1.0.4"
+itertools = "0.10"
+lazy_static = "1.4"
+once_cell = "1.7.2"
+ordered-float = "3.0.0"
+#parse-display = "0.6"
+paste = "1.0.7"
+thiserror = "1.0.30"
+
+# Algorithms 
+mur3 = "0.1.0"
+
+# Asynchronous 
+async-trait = "0.1.56"
+async-recursion = "1.0.0"
+deadpool = "0.9.5"
+futures = { version = "0.3.15", features = ["thread-pool"] }
+futures-executor = "0.3.25"
+tokio = { version = "1.17.0", features = ["full"] }
+tokio-cron-scheduler = "0.8.3"
+crossbeam-channel = "0.5"
+
+# Cli
+clap = { version = "3.2.5", features = ["derive", "env"] }
+
+# Compression
+flate2 = { version = "1.0.17", features = ["zlib"], default-features = false }
+
+# Concurrency
+parking_lot = "0.12.0"
+crossbeam = "0.8.1"
+
+# Configuration
+serfig = "0.0.2"
+
+# Data structures
+bytes = "1.2.0"
+dashmap = "5.4.0"
+either = "1.8.0"
+# fixedbitset = "0.4.2"
+indexmap = "1.9.1"
+linked-hash-map = "0.5.6"
+min-max-heap = "1.3.0"
+# more_collections = "0.3.0"
+multiset = "0.0.5"
+smallvec = "1.7"
+
+# Databse
+sqlx = { version = "0.6.2", features = [
+    "mysql",
+    "postgres",
+    "runtime-tokio-rustls",
+    # "runtime-async-std-rustls",
+    "all-types",
+    "macros",
+    "chrono",
+] }
+
+# Date and time
+chrono = { version = "0.4.23", features = ["serde"] }
+chrono-tz = "0.6"
+time = "0.3"
+
+# Development tools
+atty = "0.2.14"
+# deno_core = "0.153.0"
+derivative = "2"
+enum-as-inner = "0.5"
+#enum-display-derive = "0.1.1"
+# jsonpath-rust = "0.1.6"
+jsonpath_lib = "0.3.0"
+java-properties = "1.4.1"
+serde = { version = "1.0.137", features = ["derive"] }
+serde_json = "1.0.81"
+strum = "0.24.0"
+strum_macros = "0.24"
+thread_local = "1.1.7"
+try-catch = "0.2.2"
+
+# Encoding data
+base58 = "0.2.0"
+bincode = "1.3.3"
+crc = "3.0.0"
+crc32fast = "1.3.2"
+csv = "1.2"
+flatbuffers = "22.10.26"
+hex = "0.4"
+prost = "0.11.0"
+toml = "0.5"
+percent-encoding = "2.2.0"
+
+# Filesystem
+tempfile = "3.2"
+memmap = "0.7"
+
+# Math
+num = "0.4.0"
+# num-integer = "0.1"
+# num-traits = "0.2.15"
+num-runtime-fmt = "0.1.2"
+bigdecimal = { version = "0.3.0", features = ["serde"] }
+rust_decimal = "1.26.1"
+rust_decimal_macros = "1.26.1"
+
+# Memory Managment
+arc-swap = "1"
+slab = "0.4"
+
+# Network programming
+rdkafka = { version = "0.29.0", features = ["cmake-build"] }
+tonic = "0.8.1"
+tower = { version = "0.4.13", features = ["timeout", "limit", "buffer"] }
+tower-http = { version = "0.3.0", features = ["trace"] }
+
+# Observing
+env_logger = "0.9"
+log = "0.4"
+metrics = "0.20.1"
+metrics-exporter-prometheus = { version = "0.11.0", default-features = false }
+opentelemetry = { version = "0.18.0", default-features = false, features = [
+    "trace",
+    "rt-tokio",
+] }
+opentelemetry-jaeger = { version = "0.17.0", features = ["rt-tokio"] }
+prometheus-parse = "0.2.3"
+tracing = "0.1.35"
+tracing-appender = "0.2.2"
+tracing-bunyan-formatter = "0.3.2"
+tracing-log = "0.1.3"
+tracing-subscriber = { version = "0.3.11", features = ["env-filter", "ansi"] }
+tracing-opentelemetry = "0.18.0"
+
+# Operating systems 
+libloading = "0.7"
+ctrlc = { version = "3.2.2", features = ["termination"] }
+
+# Parser  
+semver = "1.0.10"
+
+# Script Language
+rhai = "1.13.0"
+
+# Text processing 
+bstr = "1.0.0"
+heck = "0.4.0"
+regex = "1"
+substring = "1.4.5"
+smartstring = "1.0.1"
+# smol_str = "0.1.23"
+# smallstr = "0.3.0" 
+# ustr = "0.9.0"
+# string_cache = "0.8.4"
+# lasso = "0.6.0"  
+
+# Value formatting
+itoa = "1.0.3"
+numtoa = "0.2.4"
+uuid = { version = "1.1.2", features = [
+    "serde",
+    "v4",
+    "fast-rng",
+    "macro-diagnostics",
+] }
+
+# Web
+axum = { version = "0.5.13", features = ["ws", "headers"] }
+axum-macros = "0.2.3"
+headers = "0.3"
+http = "0.2.6"
+hyper = { version = "0.14", features = ["full"] }
+mime = "0.3"
+tokio-tungstenite = { version = "0.16.1", features = [
+    "rustls-tls-webpki-roots",
+] }
+
+[profile.release]
+debug = 1               # line tables only
+opt-level = 3           # all optimizations
+lto = 'thin'            # link time optimizations
+overflow-checks = false # Disable integer overflow checks.
+codegen-units = 1       # Reduce number of codegen units to increase optimizations.
+incremental = true
+
+[profile.dev]
+# see https://doc.rust-lang.org/cargo/reference/profiles.html
+incremental = true
