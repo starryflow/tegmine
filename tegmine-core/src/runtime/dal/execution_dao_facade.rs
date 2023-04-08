@@ -6,6 +6,7 @@ use crate::config::Properties;
 use crate::dao::{ExecutionDao, IndexDao, QueueDao};
 use crate::model::{TaskModel, TaskSummary, Workflow, WorkflowModel, WorkflowSummary};
 use crate::utils::QueueUtils;
+use crate::WorkflowStatus;
 
 /// Service that acts as a facade for accessing execution data from the `ExecutionDao`,
 /// `RateLimitingDao` and `IndexDao` storage layers
@@ -28,7 +29,22 @@ impl ExecutionDaoFacade {
     /// Fetches the `Workflow` object from the data store given the id. Attempts to fetch from
     /// `ExecutionDAO` first, if not found, attempts to fetch from `IndexDAO`.
     pub fn get_workflow(workflow_id: &InlineStr, include_task: bool) -> TegResult<Workflow> {
-        Ok(Self::get_workflow_model_from_data_store(workflow_id, include_task)?.to_workflow())
+        if let Some((workflow, tasks)) =
+            ExecutionDao::get_workflow_include_tasks_ref(workflow_id, include_task)
+        {
+            let status = workflow.status;
+            let (workflow, tasks) = if status == WorkflowStatus::Completed {
+                (
+                    Some(workflow.clone()),
+                    tasks.iter().map(|x| x.value().clone()).collect(),
+                )
+            } else {
+                (None, Vec::default())
+            };
+            Ok(Workflow::new(status, workflow, tasks))
+        } else {
+            fmt_err!(NotFound, "No such workflow found by id: {}", workflow_id)
+        }
     }
 
     // get_workflow_include_tasks
@@ -74,11 +90,9 @@ impl ExecutionDaoFacade {
             Properties::get_workflow_offset_timeout_sec(),
         );
         if Properties::is_async_indexing_enabled() {
-            IndexDao::async_index_workflow(WorkflowSummary::new(
-                workflow.value().clone().to_workflow(),
-            ));
+            IndexDao::async_index_workflow(WorkflowSummary::new(workflow.value().clone()));
         } else {
-            IndexDao::index_workflow(WorkflowSummary::new(workflow.value().clone().to_workflow()));
+            IndexDao::index_workflow(WorkflowSummary::new(workflow.value().clone()));
         }
         workflow
     }
@@ -94,7 +108,7 @@ impl ExecutionDaoFacade {
         if Properties::is_async_indexing_enabled() {
             unimplemented!()
         } else {
-            IndexDao::index_workflow(WorkflowSummary::new(workflow.value().clone().to_workflow()));
+            IndexDao::index_workflow(WorkflowSummary::new(workflow.value().clone()));
         }
     }
 
@@ -212,7 +226,7 @@ impl ExecutionDaoFacade {
         // enabled. If it *is* enabled, tasks will be indexed only when a workflow is in
         // terminal state.
         if !Properties::is_async_indexing_enabled() {
-            IndexDao::index_task(TaskSummary::new(task_model.clone().to_task()));
+            IndexDao::index_task(TaskSummary::new(task_model.clone()));
         }
     }
 

@@ -29,15 +29,15 @@ fn start_workflow() {
 
     let mut workflow = ExecutionService::get_execution_status(workflow_instance_id.as_str(), false)
         .expect("get_execution_status failed");
-    while !workflow.inner.status.is_terminal() {
+    while !workflow.status.is_terminal() {
         thread::sleep(Duration::from_millis(100));
         workflow = ExecutionService::get_execution_status(workflow_instance_id.as_str(), false)
             .expect("get_execution_status failed");
     }
 
-    if workflow.inner.status.is_successful() {
+    if workflow.status.is_successful() {
         eprintln!("workflow execute successful");
-        eprintln!("output: {:?}", workflow.inner.output);
+        eprintln!("output: {:?}", workflow.workflow.expect("not none").output);
     } else {
         assert!(false, "workflow execute failed");
     }

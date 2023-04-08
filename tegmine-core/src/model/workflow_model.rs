@@ -3,7 +3,7 @@ use tegmine_common::prelude::*;
 use tegmine_common::WorkflowDef;
 
 use super::task_model::TaskModel;
-use super::{Workflow, WorkflowStatus};
+use super::WorkflowStatus;
 use crate::runtime::StartWorkflowInput;
 
 #[derive(Clone, Debug)]
@@ -112,9 +112,5 @@ impl WorkflowModel {
         }
 
         Ok(found.pop())
-    }
-
-    pub fn to_workflow(self) -> Workflow {
-        Workflow { inner: self }
     }
 }
