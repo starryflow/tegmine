@@ -44,21 +44,29 @@ impl StartWorkflowRequest {
 impl TryFrom<serde_json::Value> for StartWorkflowRequest {
     type Error = ErrorCode;
     fn try_from(value: serde_json::Value) -> Result<Self, Self::Error> {
-        let mut task_to_domain = HashMap::default();
-        for (k, v) in value
-            .get("taskToDomain")
-            .and_then(|x| x.as_object())
-            .ok_or(ErrorCode::IllegalArgument("taskToDomain invalid"))?
-        {
-            if let Some(v) = v.as_str() {
-                task_to_domain.insert(k.into(), v.into());
+        let task_to_domain = if let Some(json) = value.get("taskToDomain") {
+            if json.as_null().is_none() {
+                let mut task_to_domain = HashMap::default();
+                for (k, v) in json
+                    .as_object()
+                    .ok_or(ErrorCode::IllegalArgument("taskToDomain invalid"))?
+                {
+                    if let Some(v) = v.as_str() {
+                        task_to_domain.insert(k.into(), v.into());
+                    } else {
+                        return fmt_err!(
+                            IllegalArgument,
+                            "taskToDomain invalid, key/value must be string"
+                        );
+                    }
+                }
+                task_to_domain
             } else {
-                return fmt_err!(
-                    IllegalArgument,
-                    "taskToDomain invalid, key/value must be string"
-                );
+                HashMap::default()
             }
-        }
+        } else {
+            HashMap::default()
+        };
 
         let workflow_def = if let Some(workflow_def) = value.get("workflowDef") {
             Some(WorkflowDef::try_from(workflow_def)?)

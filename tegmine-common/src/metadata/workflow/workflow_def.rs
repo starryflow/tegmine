@@ -159,7 +159,7 @@ impl TryFrom<&serde_json::Value> for WorkflowDef {
             name: value
                 .get("name")
                 .and_then(|x| x.as_str())
-                .ok_or(ErrorCode::IllegalArgument("name not found"))?
+                .ok_or(ErrorCode::IllegalArgument("WorkflowDef: name not found"))?
                 .trim()
                 .into(),
             description: value
@@ -172,12 +172,15 @@ impl TryFrom<&serde_json::Value> for WorkflowDef {
                 .get("version")
                 .unwrap_or(&serde_json::json!(0))
                 .as_i64()
-                .ok_or(ErrorCode::IllegalArgument("version invalid"))? as i32,
+                .ok_or(ErrorCode::IllegalArgument("WorkflowDef: version invalid"))?
+                as i32,
             tasks: WorkflowTask::try_from_jsonlist(
                 value
                     .get("tasks")
                     .and_then(|x| x.as_array())
-                    .ok_or(ErrorCode::IllegalArgument("tasks not found or not array"))?,
+                    .ok_or(ErrorCode::IllegalArgument(
+                        "WorkflowDef: tasks not found or not array",
+                    ))?,
             )?,
             input_parameters,
             output_parameters,
@@ -186,7 +189,9 @@ impl TryFrom<&serde_json::Value> for WorkflowDef {
                 .get("failureWorkflow")
                 .unwrap_or(&serde_json::json!(""))
                 .as_str()
-                .ok_or(ErrorCode::IllegalArgument("failureWorkflow invalid"))?
+                .ok_or(ErrorCode::IllegalArgument(
+                    "WorkflowDef: failureWorkflow invalid",
+                ))?
                 .trim()
                 .into(),
             schema_version: 2,
@@ -194,35 +199,43 @@ impl TryFrom<&serde_json::Value> for WorkflowDef {
                 .get("restartable")
                 .unwrap_or(&serde_json::json!(true))
                 .as_bool()
-                .ok_or(ErrorCode::IllegalArgument("restartable invalid"))?,
+                .ok_or(ErrorCode::IllegalArgument(
+                    "WorkflowDef: restartable invalid",
+                ))?,
             workflow_status_listener_enabled: value
                 .get("workflowStatusListenerEnabled")
                 .unwrap_or(&serde_json::json!(false))
                 .as_bool()
                 .ok_or(ErrorCode::IllegalArgument(
-                    "workflowStatusListenerEnabled invalid",
+                    "WorkflowDef: workflowStatusListenerEnabled invalid",
                 ))?,
             owner_email: value
                 .get("ownerEmail")
                 .unwrap_or(&serde_json::json!(""))
                 .as_str()
-                .ok_or(ErrorCode::IllegalArgument("ownerEmail invalid"))?
+                .ok_or(ErrorCode::IllegalArgument(
+                    "WorkflowDef: ownerEmail invalid",
+                ))?
                 .trim()
                 .into(),
             timeout_seconds: value
                 .get("timeoutSeconds")
-                .and_then(|x| x.as_i64())
-                .ok_or(ErrorCode::IllegalArgument("timeoutSeconds not found"))?
-                as i32,
+                .unwrap_or(&serde_json::json!(0))
+                .as_i64()
+                .ok_or(ErrorCode::IllegalArgument(
+                    "WorkflowDef: timeoutSeconds not found",
+                ))? as i32,
             timeout_policy: TimeoutPolicy::from_str(
                 value
                     .get("timeoutPolicy")
                     .unwrap_or(&serde_json::json!("TIME_OUT_WF"))
                     .as_str()
-                    .ok_or(ErrorCode::IllegalArgument("timeoutPolicy invalid"))?
+                    .ok_or(ErrorCode::IllegalArgument(
+                        "WorkflowDef: timeoutPolicy invalid",
+                    ))?
                     .trim(),
             )
-            .map_err(|_| ErrorCode::IllegalArgument("timeoutPolicy invalid"))?,
+            .map_err(|_| ErrorCode::IllegalArgument("WorkflowDef: timeoutPolicy invalid"))?,
             variables: HashMap::default(),
             create_time: 0,
             update_time: 0,
@@ -234,7 +247,7 @@ impl TryFrom<&serde_json::Value> for WorkflowDef {
 #[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum TimeoutPolicy {
     /// Workflow is marked as TIMED_OUT and terminated
-    TimeoutWf,
+    TimeOutWf,
     /// Registers a counter (workflow_failure with status tag set to TIMED_OUT)
     AlertOnly,
 }

@@ -112,32 +112,47 @@ impl TaskDef {
 impl TryFrom<&serde_json::Value> for TaskDef {
     type Error = ErrorCode;
     fn try_from(value: &serde_json::Value) -> Result<Self, Self::Error> {
-        let mut input_keys = Vec::default();
-        for input_key in value
-            .get("inputKeys")
-            .and_then(|x| x.as_array())
-            .ok_or(ErrorCode::IllegalArgument("inputKeys invalid"))?
-        {
-            if let Some(input_k) = input_key.as_str() {
-                input_keys.push(input_k.trim().into());
+        let input_keys = if let Some(json) = value.get("inputKeys") {
+            if json.as_null().is_none() {
+                let mut input_keys = Vec::default();
+                for input_key in json
+                    .as_array()
+                    .ok_or(ErrorCode::IllegalArgument("inputKeys invalid"))?
+                {
+                    if let Some(input_k) = input_key.as_str() {
+                        input_keys.push(input_k.trim().into());
+                    } else {
+                        return str_err!(IllegalArgument, "inputKeys invalid");
+                    }
+                }
+                input_keys
             } else {
-                return str_err!(IllegalArgument, "inputKeys invalid");
+                Vec::default()
             }
-        }
+        } else {
+            Vec::default()
+        };
 
-        let mut output_keys = Vec::default();
-        for output_key in value
-            .get("outputKeys")
-            .unwrap_or(&serde_json::json!("[]"))
-            .as_array()
-            .ok_or(ErrorCode::IllegalArgument("outputKeys invalid"))?
-        {
-            if let Some(out_k) = output_key.as_str() {
-                output_keys.push(out_k.trim().into());
+        let output_keys = if let Some(json) = value.get("outputKeys") {
+            if json.as_null().is_none() {
+                let mut output_keys = Vec::default();
+                for output_key in json
+                    .as_array()
+                    .ok_or(ErrorCode::IllegalArgument("outputKeys invalid"))?
+                {
+                    if let Some(out_k) = output_key.as_str() {
+                        output_keys.push(out_k.trim().into());
+                    } else {
+                        return str_err!(IllegalArgument, "outputKeys invalid");
+                    }
+                }
+                output_keys
             } else {
-                return str_err!(IllegalArgument, "outputKeys invalid");
+                Vec::default()
             }
-        }
+        } else {
+            Vec::default()
+        };
 
         let input_template = if value.get("inputTemplate").is_none() {
             HashMap::default()
@@ -231,8 +246,9 @@ impl TryFrom<&serde_json::Value> for TaskDef {
                 .map(|x| x as i32),
             owner_email: value
                 .get("ownerEmail")
-                .and_then(|x| x.as_str())
-                .ok_or(ErrorCode::IllegalArgument("ownerEmail not found"))?
+                .unwrap_or(&serde_json::json!(""))
+                .as_str()
+                .ok_or(ErrorCode::IllegalArgument("ownerEmail invalid"))?
                 .trim()
                 .into(),
             isolation_group_id: InlineStr::default(),

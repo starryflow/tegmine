@@ -605,7 +605,7 @@ impl DeciderService {
                 //         workflow.getOwnerApp());
                 Ok(())
             }
-            TimeoutPolicy::TimeoutWf => {
+            TimeoutPolicy::TimeOutWf => {
                 terminate_workflow_exception::STATUS
                     .with(|x| x.replace(Some(WorkflowStatus::TimedOut)));
 

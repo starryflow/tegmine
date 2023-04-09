@@ -228,7 +228,7 @@ impl TryFrom<&serde_json::Value> for WorkflowTask {
         let type_: InlineStr = value
             .get("type")
             .and_then(|x| x.as_str())
-            .ok_or(ErrorCode::IllegalArgument("type not found"))?
+            .ok_or(ErrorCode::IllegalArgument("WorkflowTask: type not found"))?
             .trim()
             .into();
 
@@ -237,7 +237,9 @@ impl TryFrom<&serde_json::Value> for WorkflowTask {
             value
                 .get("inputParameters")
                 .and_then(|x| x.as_object())
-                .ok_or(ErrorCode::IllegalArgument("inputParameters invalid"))?,
+                .ok_or(ErrorCode::IllegalArgument(
+                    "WorkflowTask: inputParameters invalid",
+                ))?,
         );
 
         // SWITCH
@@ -251,17 +253,26 @@ impl TryFrom<&serde_json::Value> for WorkflowTask {
         if type_.eq("SET_VARIABLE") && input_parameters.is_empty() {
             return fmt_err!(
                 IllegalArgument,
-                "inputParameters can not be empty when task type is SET_VARIABLE"
+                "WorkflowTask: inputParameters can not be empty when task type is SET_VARIABLE"
             );
         }
 
-        // START_WORKFLOW -> inputParameters<startWorkflow>
-        // TERMINATE -> inputParameters<terminationStatus, workflowOutput, terminationReason>
-        // SUB_WORKFLOW -> subWorkflowParam
+        // TERMINATE
+        if type_.eq("TERMINATE") {
+            if !input_parameters.contains_key("terminationStatus") {
+                return fmt_err!(
+                    IllegalArgument,
+                    "WorkflowTask: terminationStatus in inputParameters not found when task type is TERMINATE"
+                );
+            }
+        }
+
         let (loop_condition, loop_over) = Self::loop_try_from(&type_, value)?;
 
         // TODO
         {
+            // START_WORKFLOW -> inputParameters<startWorkflow>
+            // SUB_WORKFLOW -> subWorkflowParam
 
             // FORK_JOIN -> forkTasks
             // JOIN -> joinOn
@@ -276,17 +287,26 @@ impl TryFrom<&serde_json::Value> for WorkflowTask {
             // WAIT -> inputParameters<duration or until>
         }
 
+        // ad hoc TaskDef
+        let task_definition = if let Some(task_def) = value.get("taskDefinition") {
+            Some(TaskDef::try_from(task_def)?)
+        } else {
+            None
+        };
+
         Ok(Self {
             name: value
                 .get("name")
                 .and_then(|x| x.as_str())
-                .ok_or(ErrorCode::IllegalArgument("name not found"))?
+                .ok_or(ErrorCode::IllegalArgument("WorkflowTask: name not found"))?
                 .trim()
                 .into(),
             task_reference_name: value
                 .get("taskReferenceName")
                 .and_then(|x| x.as_str())
-                .ok_or(ErrorCode::IllegalArgument("taskReferenceName not found"))?
+                .ok_or(ErrorCode::IllegalArgument(
+                    "WorkflowTask: taskReferenceName not found",
+                ))?
                 .trim()
                 .into(),
             type_,
@@ -300,19 +320,22 @@ impl TryFrom<&serde_json::Value> for WorkflowTask {
                 .get("optional")
                 .unwrap_or(&serde_json::json!(false))
                 .as_bool()
-                .ok_or(ErrorCode::IllegalArgument("optional invalid"))?,
+                .ok_or(ErrorCode::IllegalArgument("WorkflowTask: optional invalid"))?,
             input_parameters,
             async_complete: value
                 .get("asyncComplete")
                 .unwrap_or(&serde_json::json!(false))
                 .as_bool()
-                .ok_or(ErrorCode::IllegalArgument("asyncComplete invalid"))?,
+                .ok_or(ErrorCode::IllegalArgument(
+                    "WorkflowTask: asyncComplete invalid",
+                ))?,
             start_delay: value
                 .get("startDelay")
                 .unwrap_or(&serde_json::json!(0))
                 .as_i64()
-                .ok_or(ErrorCode::IllegalArgument("startDelay invalid"))?
-                as i32,
+                .ok_or(ErrorCode::IllegalArgument(
+                    "WorkflowTask: startDelay invalid",
+                ))? as i32,
             evaluator_type,
             expression,
             decision_cases,
@@ -329,7 +352,7 @@ impl TryFrom<&serde_json::Value> for WorkflowTask {
             // sink: (),
             // rate_limited: (),
             retry_count: 0,
-            task_definition: None,
+            task_definition,
             // case_value_param: (),
             // case_expression: (),
             // script_expression: (),
@@ -347,19 +370,6 @@ impl WorkflowTask {
         Ok(tasks)
     }
 
-    pub fn try_from_jsonmap(
-        jsonmap: &serde_json::Map<String, serde_json::Value>,
-    ) -> TegResult<HashMap<InlineStr, Vec<Self>>> {
-        let mut tasks = HashMap::with_capacity(jsonmap.len());
-        for (k, v) in jsonmap {
-            let jsonlist = v
-                .as_array()
-                .ok_or(ErrorCode::IllegalArgument("decisionCases invalid"))?;
-            tasks.insert(k.into(), Self::try_from_jsonlist(jsonlist)?);
-        }
-        Ok(tasks)
-    }
-
     fn switch_try_from(
         type_: &InlineStr,
         value: &serde_json::Value,
@@ -373,7 +383,9 @@ impl WorkflowTask {
             let evaluator_type: InlineStr = value
                 .get("evaluatorType")
                 .and_then(|x| x.as_str())
-                .ok_or(ErrorCode::IllegalArgument("evaluatorType not found"))?
+                .ok_or(ErrorCode::IllegalArgument(
+                    "WorkflowTask: evaluatorType not found",
+                ))?
                 .trim()
                 .into();
             if !evaluator_type.as_str().eq("value-param")
@@ -381,35 +393,44 @@ impl WorkflowTask {
             {
                 return fmt_err!(
                     IllegalArgument,
-                    "evaluatorType invalid, not ''value-param' or 'javascript'"
+                    "WorkflowTask: evaluatorType invalid, not ''value-param' or 'javascript'"
                 );
             }
 
             let expression: InlineStr = value
                 .get("expression")
                 .and_then(|x| x.as_str())
-                .ok_or(ErrorCode::IllegalArgument("expression not found"))?
+                .ok_or(ErrorCode::IllegalArgument(
+                    "WorkflowTask: expression not found",
+                ))?
                 .trim()
                 .into();
 
-            let decision_cases = WorkflowTask::try_from_jsonmap(
+            let decision_cases = WorkflowTask::decision_case_try_from(
                 value
                     .get("decisionCases")
                     .and_then(|x| x.as_object())
-                    .ok_or(ErrorCode::IllegalArgument("decisionCases invalid"))?,
+                    .ok_or(ErrorCode::IllegalArgument(
+                        "WorkflowTask: decisionCases invalid",
+                    ))?,
             )?;
             if decision_cases.is_empty() {
-                return fmt_err!(IllegalArgument, "decisionCases can not be empty");
+                return fmt_err!(
+                    IllegalArgument,
+                    "WorkflowTask: decisionCases can not be empty"
+                );
             }
 
             let default_case = WorkflowTask::try_from_jsonlist(
-                value
-                    .get("defaultCase")
-                    .and_then(|x| x.as_array())
-                    .ok_or(ErrorCode::IllegalArgument("defaultCase invalid"))?,
+                value.get("defaultCase").and_then(|x| x.as_array()).ok_or(
+                    ErrorCode::IllegalArgument("WorkflowTask: defaultCase invalid"),
+                )?,
             )?;
             if default_case.is_empty() {
-                return fmt_err!(IllegalArgument, "defaultCase can not be empty");
+                return fmt_err!(
+                    IllegalArgument,
+                    "WorkflowTask: defaultCase can not be empty"
+                );
             }
             Ok((evaluator_type, expression, decision_cases, default_case))
         } else {
@@ -422,6 +443,19 @@ impl WorkflowTask {
         }
     }
 
+    fn decision_case_try_from(
+        jsonmap: &serde_json::Map<String, serde_json::Value>,
+    ) -> TegResult<HashMap<InlineStr, Vec<Self>>> {
+        let mut tasks = HashMap::with_capacity(jsonmap.len());
+        for (k, v) in jsonmap {
+            let jsonlist = v.as_array().ok_or(ErrorCode::IllegalArgument(
+                "WorkflowTask: decisionCases invalid",
+            ))?;
+            tasks.insert(k.into(), Self::try_from_jsonlist(jsonlist)?);
+        }
+        Ok(tasks)
+    }
+
     fn dynamic_try_from(
         type_: &InlineStr,
         input_parameters: &HashMap<InlineStr, Object>,
@@ -431,13 +465,15 @@ impl WorkflowTask {
             let dynamic_task_name_param = value
                 .get("dynamicTaskNameParam")
                 .and_then(|x| x.as_str())
-                .ok_or(ErrorCode::IllegalArgument("dynamicTaskNameParam not found"))?
+                .ok_or(ErrorCode::IllegalArgument(
+                    "WorkflowTask: dynamicTaskNameParam not found",
+                ))?
                 .trim()
                 .into();
             if !input_parameters.contains_key(&dynamic_task_name_param) {
                 return fmt_err!(
                     IllegalArgument,
-                    "dynamicTaskNameParam invalid: can not find {} in inputParameters",
+                    "WorkflowTask: dynamicTaskNameParam invalid: can not find {} in inputParameters",
                     dynamic_task_name_param
                 );
             }
@@ -455,17 +491,19 @@ impl WorkflowTask {
             let loop_condition = value
                 .get("loopCondition")
                 .and_then(|x| x.as_str())
-                .ok_or(ErrorCode::IllegalArgument("loopCondition not found"))?
+                .ok_or(ErrorCode::IllegalArgument(
+                    "WorkflowTask: loopCondition not found",
+                ))?
                 .trim()
                 .into();
             let loop_over = WorkflowTask::try_from_jsonlist(
                 value
                     .get("loopOver")
                     .and_then(|x| x.as_array())
-                    .ok_or(ErrorCode::IllegalArgument("loopOver invalid"))?,
+                    .ok_or(ErrorCode::IllegalArgument("WorkflowTask: loopOver invalid"))?,
             )?;
             if loop_over.is_empty() {
-                return fmt_err!(IllegalArgument, "loopOver can not be empty");
+                return fmt_err!(IllegalArgument, "WorkflowTask: loopOver can not be empty");
             }
             Ok((loop_condition, loop_over))
         } else {
