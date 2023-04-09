@@ -1,6 +1,8 @@
+use tegmine_common::prelude::*;
 use tegmine_common::TaskType;
 
 use super::workflow_system_task::WorkflowSystemTask;
+use crate::model::{TaskModel, WorkflowModel};
 
 /// The START_WORKFLOW task starts another workflow. Unlike SUB_WORKFLOW, START_WORKFLOW does not
 /// create a relationship between starter and the started workflow. It also does not wait for the
@@ -13,5 +15,13 @@ pub struct StartWorkflow;
 impl WorkflowSystemTask for StartWorkflow {
     fn get_task_type(&self) -> &str {
         TaskType::StartWorkflow.as_ref()
+    }
+
+    fn start(&self, _workflow: &WorkflowModel, _task: &TaskModel) -> TegResult<()> {
+        todo!()
+    }
+
+    fn is_async(&self) -> bool {
+        true
     }
 }

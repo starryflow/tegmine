@@ -81,6 +81,35 @@ impl Object {
             Object::Null => "".into(),
         }
     }
+
+    pub fn estimate_map_memory_used(hashmap: &HashMap<InlineStr, Object>) -> i32 {
+        let mut memeory_used = 0;
+        for (k, v) in hashmap {
+            memeory_used += k.as_bytes().len() as i32;
+            memeory_used += v.estimate_memory_used();
+        }
+        memeory_used
+    }
+
+    pub fn estimate_list_memory_used(list: &Vec<Object>) -> i32 {
+        let mut memeory_used = 0;
+        for v in list {
+            memeory_used += v.estimate_memory_used();
+        }
+        memeory_used
+    }
+
+    pub fn estimate_memory_used(&self) -> i32 {
+        match self {
+            Object::Int(_) => 4,
+            Object::Long(_) => 8,
+            Object::Boolean(_) => 1,
+            Object::String(v) => v.as_bytes().len() as i32,
+            Object::Map(v) => Self::estimate_map_memory_used(v),
+            Object::List(v) => Self::estimate_list_memory_used(v),
+            Object::Null => 1,
+        }
+    }
 }
 
 /// json <-> object
