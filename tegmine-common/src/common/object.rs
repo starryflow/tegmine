@@ -83,20 +83,20 @@ impl Object {
     }
 
     pub fn estimate_map_memory_used(hashmap: &HashMap<InlineStr, Object>) -> i32 {
-        let mut memeory_used = 0;
+        let mut memory_used = 0;
         for (k, v) in hashmap {
-            memeory_used += k.as_bytes().len() as i32;
-            memeory_used += v.estimate_memory_used();
+            memory_used += k.as_bytes().len() as i32;
+            memory_used += v.estimate_memory_used();
         }
-        memeory_used
+        memory_used
     }
 
     pub fn estimate_list_memory_used(list: &Vec<Object>) -> i32 {
-        let mut memeory_used = 0;
+        let mut memory_used = 0;
         for v in list {
-            memeory_used += v.estimate_memory_used();
+            memory_used += v.estimate_memory_used();
         }
-        memeory_used
+        memory_used
     }
 
     pub fn estimate_memory_used(&self) -> i32 {
