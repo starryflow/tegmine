@@ -93,7 +93,7 @@ impl TaskMapper for SwitchTaskMapper {
             tasks_to_be_scheduled.extend(case_tasks);
             tasks_to_be_scheduled[0]
                 .input_data
-                .insert("hasChindren".into(), "true".into());
+                .insert("hasChildren".into(), "true".into());
         }
 
         Ok(tasks_to_be_scheduled)

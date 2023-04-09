@@ -381,7 +381,7 @@ impl ExecutionDao {
         let workflow = WORKFLOW.get(&workflow_id).expect("always not empty");
 
         if !update {
-            // Add to list of workflows for a workflowdef
+            // Add to list of workflows for a workflow_def
             WORKFLOW_DEF_TO_WORKFLOWS
                 .entry((
                     workflow.workflow_definition.name.clone(),

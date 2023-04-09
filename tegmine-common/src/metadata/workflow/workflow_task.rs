@@ -47,8 +47,8 @@ pub struct WorkflowTask {
     /// "taskToExecute"
     pub dynamic_task_name_param: InlineStr,
     /// DO_WHILE
-    /// Condition to be evaluated after every iteration. This is a Javascript expression, evaluated
-    /// using the Nashorn engine. If an exception occurs during evaluation, the DO_WHILE task is
+    /// Condition to be evaluated after every iteration. This is a Rhai expression, evaluated
+    /// using the rhai engine. If an exception occurs during evaluation, the DO_WHILE task is
     /// set to FAILED_WITH_TERMINAL_ERROR.
     pub loop_condition: InlineStr,
     /// List of tasks that needs to be executed as long as the condition is true.

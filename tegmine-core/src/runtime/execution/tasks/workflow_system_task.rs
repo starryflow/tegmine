@@ -45,7 +45,7 @@ pub trait WorkflowSystemTask: Send + Sync {
     fn get_task_type(&self) -> &str;
 
     /// Default to true for retrieving tasks when retrieving workflow data. Some cases (e.g.
-    /// subworkflows) might not need the tasks at all, and by setting this to false in that case,
+    /// sub_workflows) might not need the tasks at all, and by setting this to false in that case,
     /// you can get a solid performance gain.
     ///
     /// return true for retrieving tasks when getting workflow

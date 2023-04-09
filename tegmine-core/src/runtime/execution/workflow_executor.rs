@@ -121,7 +121,7 @@ impl WorkflowExecutor {
         workflow.status = WorkflowStatus::Completed;
 
         // update the failed reference task names
-        let failed_taks = workflow
+        let failed_tasks = workflow
             .tasks
             .iter()
             .filter(|x| {
@@ -130,14 +130,14 @@ impl WorkflowExecutor {
             .collect::<Vec<_>>();
 
         workflow.failed_reference_task_names.extend(
-            failed_taks
+            failed_tasks
                 .iter()
                 .map(|x| x.reference_task_name.clone())
                 .collect::<HashSet<_>>(),
         );
 
         workflow.failed_task_names.extend(
-            failed_taks
+            failed_tasks
                 .iter()
                 .map(|x| x.task_def_name.clone())
                 .collect::<HashSet<_>>(),
@@ -198,7 +198,7 @@ impl WorkflowExecutor {
         }
 
         // update the failed reference task names
-        let failed_taks = workflow
+        let failed_tasks = workflow
             .tasks
             .iter()
             .filter(|x| {
@@ -207,14 +207,14 @@ impl WorkflowExecutor {
             .collect::<Vec<_>>();
 
         workflow.failed_reference_task_names.extend(
-            failed_taks
+            failed_tasks
                 .iter()
                 .map(|x| x.reference_task_name.clone())
                 .collect::<HashSet<_>>(),
         );
 
         workflow.failed_task_names.extend(
-            failed_taks
+            failed_tasks
                 .iter()
                 .map(|x| x.task_def_name.clone())
                 .collect::<HashSet<_>>(),

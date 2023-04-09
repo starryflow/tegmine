@@ -66,7 +66,7 @@ impl WorkflowService {
         unimplemented!()
     }
 
-    /// Pauses the workflow given a worklfow_id.
+    /// Pauses the workflow given a workflow_id.
 
     #[allow(unused)]
     fn pause_workflow(&self, workflow_id: &str) {
@@ -109,7 +109,7 @@ impl WorkflowService {
     /// Retries the last failed task.
 
     #[allow(unused)]
-    fn retry_workflow(&self, workflow_id: &str, resume_subworkflow_tasks: bool) {
+    fn retry_workflow(&self, workflow_id: &str, resume_sub_workflow_tasks: bool) {
         unimplemented!()
     }
     /// Resets callback times of all non-terminal SIMPLE tasks to 0.

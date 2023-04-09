@@ -355,7 +355,7 @@ impl DeciderService {
                 return Ok(false);
             }
 
-            // If there is a TERMINATE task that has been executed successfuly then the workflow
+            // If there is a TERMINATE task that has been executed successfully then the workflow
             // should be marked as completed.
             if TaskType::Terminate.as_ref().eq(&task.task_type)
                 && task.status.is_terminal()
@@ -374,8 +374,8 @@ impl DeciderService {
         }
 
         let workflow_tasks = &workflow.workflow_definition.tasks;
-        for wftask in workflow_tasks {
-            if let Some(status) = task_status_map.get(&wftask.task_reference_name) {
+        for wf_task in workflow_tasks {
+            if let Some(status) = task_status_map.get(&wf_task.task_reference_name) {
                 if !status.is_terminal() {
                     return Ok(false);
                 }
@@ -389,8 +389,8 @@ impl DeciderService {
             }
         }
 
-        for wftask in non_executed_tasks {
-            if Self::get_next_tasks_to_be_scheduled(workflow, wftask)?
+        for wf_task in non_executed_tasks {
+            if Self::get_next_tasks_to_be_scheduled(workflow, wf_task)?
                 .map(|n| !task_status_map.contains_key(&n))
                 .unwrap_or(false)
             {
