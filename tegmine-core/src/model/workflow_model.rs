@@ -14,7 +14,7 @@ pub struct WorkflowModel {
     pub workflow_definition: WorkflowDef,
     pub parent_workflow_id: InlineStr,
     pub parent_workflow_task_id: InlineStr,
-    pub tasks: Vec<TaskModel>,
+    pub tasks: LinkedList<TaskModel>,
     pub task_to_domain: HashMap<InlineStr, InlineStr>,
 
     pub event: InlineStr,
@@ -58,7 +58,7 @@ impl WorkflowModel {
             workflow_definition,
             parent_workflow_id: input.parent_workflow_id,
             parent_workflow_task_id: input.parent_workflow_task_id,
-            tasks: Vec::default(),
+            tasks: LinkedList::default(),
             task_to_domain: input.task_to_domain,
 
             event: input.event,

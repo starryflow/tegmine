@@ -34,9 +34,10 @@ impl WorkflowExecutor {
 
     fn end_execution(
         workflow: &mut WorkflowModel,
-        terminate_task: &Option<TaskModel>,
+        terminate_task: Option<*mut TaskModel>,
     ) -> TegResult<()> {
         if let Some(terminate_task) = terminate_task {
+            let terminate_task = unsafe { terminate_task.as_mut().expect("not nono") };
             let termination_status = if let Some(termination_status) = terminate_task
                 .workflow_task
                 .as_ref()
@@ -74,12 +75,7 @@ impl WorkflowExecutor {
             };
             if WorkflowStatus::Failed.as_ref().eq(termination_status) {
                 workflow.status = WorkflowStatus::Failed;
-                Self::terminate(
-                    workflow,
-                    workflow.status,
-                    Some(terminate_task.clone()),
-                    reason,
-                )?;
+                Self::terminate(workflow, workflow.status, Some(terminate_task), reason)?;
             } else {
                 workflow.reason_for_incompletion = reason;
                 Self::complete_workflow(workflow)?;
@@ -345,26 +341,28 @@ impl WorkflowExecutor {
         match DeciderService::decide(&mut workflow) {
             Ok(mut outcome) => {
                 if outcome.is_complete {
-                    Self::end_execution(&mut workflow, &outcome.terminate_task)?;
+                    Self::end_execution(&mut workflow, outcome.terminate_task)?;
                     return Ok(());
                 }
 
                 Self::set_task_domains(&workflow, &mut outcome.tasks_to_be_scheduled);
-                let tasks_to_be_scheduled =
-                    Self::dedup_and_add_tasks(&mut workflow, &mut outcome.tasks_to_be_scheduled);
-                let tasks_to_be_scheduled_empty = tasks_to_be_scheduled.is_empty();
 
-                let mut state_changed = Self::schedule_task(&workflow, tasks_to_be_scheduled)?; // start
+                let (tasks_to_be_scheduled, tasks_to_be_scheduled_in_outcome) =
+                    Self::dedup_and_add_tasks(&mut workflow, outcome.tasks_to_be_scheduled);
 
-                for mut task in outcome.tasks_to_be_scheduled {
-                    ExecutionDaoFacade::populate_task_data(&task);
+                let mut state_changed =
+                    Self::schedule_task(&workflow, tasks_to_be_scheduled.as_slice())?; // start
+
+                for task in tasks_to_be_scheduled_in_outcome {
+                    let task = unsafe { task.as_mut().expect("not none") };
+                    ExecutionDaoFacade::populate_task_data(task);
                     if SystemTaskRegistry::is_system_task(&task.task_type)
                         && !task.status.is_terminal()
                     {
                         let workflow_system_task = SystemTaskRegistry::get(&task.task_type)?;
                         debug!("find SystemTask: {}", workflow_system_task.get_task_type());
                         if !workflow_system_task.value().as_ref().is_async()
-                            && workflow_system_task.execute(&workflow, &mut task)
+                            && workflow_system_task.execute(&workflow, task)
                         {
                             outcome.tasks_to_be_updated.push(task);
                             state_changed = true;
@@ -376,15 +374,15 @@ impl WorkflowExecutor {
                     "find {} tasks to be updated",
                     outcome.tasks_to_be_updated.len()
                 );
-                if !outcome.tasks_to_be_updated.is_empty() || !tasks_to_be_scheduled_empty {
-                    ExecutionDaoFacade::update_tasks(outcome.tasks_to_be_updated.clone());
+                if !outcome.tasks_to_be_updated.is_empty() || !tasks_to_be_scheduled.is_empty() {
+                    ExecutionDaoFacade::update_tasks(outcome.tasks_to_be_updated.as_slice());
                 }
 
                 if state_changed {
                     return Self::decide(workflow);
                 }
 
-                if !outcome.tasks_to_be_updated.is_empty() || !tasks_to_be_scheduled_empty {
+                if !outcome.tasks_to_be_updated.is_empty() || !tasks_to_be_scheduled.is_empty() {
                     ExecutionDaoFacade::update_workflow(workflow);
                 }
 
@@ -402,7 +400,10 @@ impl WorkflowExecutor {
                         terminate_workflow_exception::STATUS
                             .with(|x| x.take())
                             .unwrap_or(WorkflowStatus::Failed),
-                        terminate_workflow_exception::TASK.with(|x| x.take()).take(),
+                        terminate_workflow_exception::TASK
+                            .with(|x| x.take())
+                            .take()
+                            .as_mut(),
                         e.message().into(),
                     )?;
                     Ok(())
@@ -438,7 +439,7 @@ impl WorkflowExecutor {
                         );
                     }
                 }
-                ExecutionDaoFacade::update_task(task.clone());
+                ExecutionDaoFacade::update_task(task);
             }
         }
         if errored_tasks.is_empty() {
@@ -453,19 +454,28 @@ impl WorkflowExecutor {
         Ok(errored_tasks)
     }
 
-    fn dedup_and_add_tasks(workflow: &mut WorkflowModel, tasks: &[TaskModel]) -> Vec<TaskModel> {
-        let mut tasks_in_workflow = HashSet::with_capacity(workflow.tasks.len());
-        workflow.tasks.iter().for_each(|x| {
-            tasks_in_workflow.insert(x.get_task_key());
-        });
+    fn dedup_and_add_tasks(
+        workflow: &mut WorkflowModel,
+        tasks: Vec<TaskModel>,
+    ) -> (Vec<*mut TaskModel>, Vec<*mut TaskModel>) {
+        let mut deduped_tasks = Vec::with_capacity(tasks.len());
+        let mut original_tasks = Vec::with_capacity(tasks.len());
+        for task in tasks {
+            if let Some(exist) = workflow
+                .tasks
+                .iter_mut()
+                .find(|x| x.get_task_key().eq(&task.get_task_key()))
+            {
+                original_tasks.push(exist as *mut TaskModel);
+            } else {
+                workflow.tasks.push_back(task);
+                let recent_push = workflow.tasks.back_mut().expect("not none") as *mut TaskModel;
+                deduped_tasks.push(recent_push);
+                original_tasks.push(recent_push);
+            }
+        }
 
-        let deduped_tasks = tasks
-            .iter()
-            .filter(|x| !tasks_in_workflow.contains(&x.get_task_key()))
-            .map(|x| x.clone())
-            .collect::<Vec<_>>();
-        workflow.tasks.extend(deduped_tasks.clone());
-        deduped_tasks
+        (deduped_tasks, original_tasks)
     }
 
     pub fn add_task_to_queue(task: &TaskModel) -> TegResult<()> {
@@ -537,17 +547,24 @@ impl WorkflowExecutor {
         }
     }
 
-    fn schedule_task(workflow: &WorkflowModel, mut tasks: Vec<TaskModel>) -> TegResult<bool> {
+    fn schedule_task(workflow: &WorkflowModel, tasks: &[*mut TaskModel]) -> TegResult<bool> {
         let mut started_system_tasks = false;
 
         if tasks.is_empty() {
             return Ok(false);
         }
 
+        let mut tasks = unsafe {
+            tasks
+                .iter()
+                .map(|x| x.as_mut().expect("not none"))
+                .collect::<Vec<_>>()
+        };
+
         // Get the highest seq number
         let mut count = workflow.tasks.iter().map(|x| x.seq).max().unwrap_or(0);
 
-        for task in tasks.iter_mut() {
+        for task in &mut tasks {
             if task.seq == 0 {
                 count += 1;
                 task.seq = count;
@@ -561,10 +578,7 @@ impl WorkflowExecutor {
         //             String.valueOf(workflow.getWorkflowVersion()));
 
         // Save the tasks in the DAO
-        let tasks = ExecutionDaoFacade::create_tasks(tasks)?
-            .iter()
-            .map(|x| x.value().clone())
-            .collect::<Vec<_>>();
+        ExecutionDaoFacade::create_tasks(tasks.as_mut())?;
 
         let mut system_task = Vec::default();
         let mut tasks_to_be_queued = Vec::default();
@@ -578,7 +592,7 @@ impl WorkflowExecutor {
 
         // Traverse through all the system tasks, start the sync tasks, in case of async queue
         // the tasks
-        for mut task in system_task {
+        for task in system_task {
             let workflow_system_task = SystemTaskRegistry::get(&task.task_type)?;
 
             if !task.status.is_terminal() && task.start_time == 0 {
@@ -625,7 +639,7 @@ impl WorkflowExecutor {
         Ok(started_system_tasks)
     }
 
-    fn add_tasks_to_queue(tasks: &Vec<TaskModel>) -> TegResult<()> {
+    fn add_tasks_to_queue(tasks: &[&mut TaskModel]) -> TegResult<()> {
         for task in tasks {
             Self::add_task_to_queue(task)?;
         }
@@ -635,7 +649,7 @@ impl WorkflowExecutor {
     fn terminate(
         workflow: &mut WorkflowModel,
         status: WorkflowStatus,
-        task: Option<TaskModel>,
+        task: Option<&mut TaskModel>,
         reason: InlineStr,
     ) -> TegResult<()> {
         if !workflow.status.is_terminal() {

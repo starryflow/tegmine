@@ -70,7 +70,7 @@ impl DeciderService {
             // marked to be skipped and not part of System tasks that is DECISION, FORK, JOIN
             // This list will be empty for a new workflow being started
             if !task.retried && task.status != TaskStatus::Skipped && !task.executed {
-                pending_tasks.push(task.clone());
+                pending_tasks.push(task as *const TaskModel as *mut TaskModel);
             }
 
             // Get all the tasks that have not completed their lifecycle yet
@@ -84,7 +84,7 @@ impl DeciderService {
                 && task.status.is_successful()
             {
                 has_successful_terminate_task = true;
-                out_come.terminate_task = Some(task.clone());
+                out_come.terminate_task = Some(task as *const TaskModel as *mut TaskModel);
             }
         }
 
@@ -97,7 +97,8 @@ impl DeciderService {
         }
 
         // A new workflow does not enter this code branch
-        for mut pending_task in pending_tasks {
+        for pending_task_ptr in pending_tasks {
+            let pending_task = unsafe { pending_task_ptr.as_mut().expect("not none") };
             if SystemTaskRegistry::is_system_task(&pending_task.task_type)
                 && !pending_task.status.is_terminal()
             {
@@ -108,7 +109,7 @@ impl DeciderService {
                 executed_task_ref_names.remove(&pending_task.reference_task_name);
             }
 
-            let pending_task_ptr = &mut pending_task as *mut TaskModel;
+            let pending_task_ptr = pending_task as *mut TaskModel;
             let workflow_ptr = workflow as *mut WorkflowModel;
             let mut task_definition = pending_task.get_task_definition();
             if task_definition.is_none() {
@@ -152,7 +153,7 @@ impl DeciderService {
                     executed_task_ref_names.remove(&retry_task.reference_task_name);
                     tasks_to_be_scheduled
                         .insert(retry_task.reference_task_name.clone(), retry_task);
-                    out_come.tasks_to_be_updated.push(pending_task.clone());
+                    out_come.tasks_to_be_updated.push(pending_task);
                 } else {
                     pending_task.status = TaskStatus::CompletedWithErrors;
                 }
@@ -184,7 +185,7 @@ impl DeciderService {
                     let _ = tasks_to_be_scheduled
                         .try_insert(next_task.reference_task_name.clone(), next_task);
                 }
-                out_come.tasks_to_be_updated.push(pending_task.clone());
+                out_come.tasks_to_be_updated.push(pending_task);
             }
         }
 
@@ -276,7 +277,7 @@ impl DeciderService {
         }
 
         // Get the first task to schedule
-        if let Some(rerun_from_task) = tasks.get_mut(0).map(|x| {
+        if let Some(rerun_from_task) = tasks.front_mut().map(|x| {
             x.status = TaskStatus::Scheduled;
             x.retried = true;
             x.retry_count = 0;
@@ -327,7 +328,7 @@ impl DeciderService {
             }
         } else {
             let last = task
-                .or_else(|| all_tasks.last())
+                .or_else(|| all_tasks.back())
                 .expect("all_task not empty");
             let workflow_def = &workflow.workflow_definition;
             if !workflow_def.output_parameters.is_empty() {
@@ -833,11 +834,12 @@ impl DeciderService {
     }
 }
 
+/// TODO: use RcRefCell(ref or pointer) instead cloned
 pub struct DeciderOutcome {
     pub tasks_to_be_scheduled: Vec<TaskModel>,
-    pub tasks_to_be_updated: Vec<TaskModel>,
+    pub tasks_to_be_updated: Vec<*mut TaskModel>,
     pub is_complete: bool,
-    pub terminate_task: Option<TaskModel>,
+    pub terminate_task: Option<*mut TaskModel>,
 }
 
 impl DeciderOutcome {

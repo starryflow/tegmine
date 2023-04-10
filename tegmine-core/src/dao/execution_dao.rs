@@ -52,11 +52,11 @@ impl ExecutionDao {
     // getTasks
 
     pub fn create_tasks(
-        tasks: Vec<TaskModel>,
+        tasks: &mut [&mut TaskModel],
     ) -> TegResult<Vec<Ref<'static, InlineStr, TaskModel>>> {
         let mut task_refs = Vec::with_capacity(tasks.len());
 
-        for mut task in tasks {
+        for task in tasks {
             Self::validate(&task)?;
 
             let task_key = task.get_task_key();
@@ -93,13 +93,13 @@ impl ExecutionDao {
                 task.task_def_name, task.workflow_instance_id, task.task_id, task.task_type
             );
 
-            task_refs.push(Self::update_task(task));
+            task_refs.push(Self::update_task_ref(task));
         }
 
         Ok(task_refs)
     }
 
-    pub fn update_task(task: TaskModel) -> Ref<'static, InlineStr, TaskModel> {
+    pub fn update_task_ref(task: &mut TaskModel) -> Ref<'static, InlineStr, TaskModel> {
         let task_id = task.task_id.clone();
         let task_definition = task.get_task_definition();
 
@@ -143,7 +143,7 @@ impl ExecutionDao {
             }
         }
 
-        TASK.insert(task_id.clone(), task);
+        TASK.insert(task_id.clone(), task.clone());
         let task = TASK.get(&task_id).expect("not none");
         debug!(
             "Workflow task payload saved to TASK with taskKey: {}, workflowId: {}, taskId: {}, taskType: {} during updateTask",
@@ -328,7 +328,7 @@ impl ExecutionDao {
             if include_tasks {
                 let mut tasks = Self::get_tasks_for_workflow(workflow_id);
                 tasks.sort_by(|a, b| a.seq.cmp(&b.seq));
-                workflow_mut.tasks = tasks;
+                workflow_mut.tasks = LinkedList::from_iter(tasks.into_iter());
             }
             Some(workflow_mut)
         } else {

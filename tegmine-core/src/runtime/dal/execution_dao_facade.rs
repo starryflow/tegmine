@@ -194,20 +194,24 @@ impl ExecutionDaoFacade {
     // getInProgressTaskCount
 
     pub fn create_tasks(
-        tasks: Vec<TaskModel>,
+        tasks: &mut [&mut TaskModel],
     ) -> TegResult<Vec<Ref<'static, InlineStr, TaskModel>>> {
         tasks.iter().for_each(|x| Self::externalize_task_data(x));
         ExecutionDao::create_tasks(tasks)
     }
 
-    pub fn update_tasks(tasks: Vec<TaskModel>) {
-        tasks.into_iter().for_each(|x| Self::update_task(x));
+    pub fn update_tasks(tasks: &[*mut TaskModel]) {
+        unsafe {
+            tasks
+                .iter()
+                .for_each(|x| Self::update_task(x.as_mut().expect("not none")));
+        }
     }
 
     /// Sets the update time for the task. Sets the end time for the task (if task is in terminal
     /// state and end time is not set). Updates the task in the `ExecutionDao` first, then stores it
     /// in the `IndexDao`.
-    pub fn update_task(mut task_model: TaskModel) {
+    pub fn update_task(task_model: &mut TaskModel) {
         if !task_model.status.is_terminal()
             || (task_model.status.is_terminal() && task_model.update_time == 0)
         {
@@ -218,7 +222,7 @@ impl ExecutionDaoFacade {
         }
 
         Self::externalize_task_data(&task_model);
-        let task_model = ExecutionDao::update_task(task_model);
+        let task_model = ExecutionDao::update_task_ref(task_model);
 
         // Indexing a task for every update adds a lot of volume. That is ok but if async indexing
         // is enabled and tasks are stored in memory until a block has completed, we would lose a
