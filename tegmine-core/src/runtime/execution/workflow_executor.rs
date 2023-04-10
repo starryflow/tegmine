@@ -349,6 +349,7 @@ impl WorkflowExecutor {
 
                 let (tasks_to_be_scheduled, tasks_to_be_scheduled_in_outcome) =
                     Self::dedup_and_add_tasks(&mut workflow, outcome.tasks_to_be_scheduled);
+                debug!("workflow has {} tasks.", workflow.tasks.len());
 
                 let mut state_changed =
                     Self::schedule_task(&workflow, tasks_to_be_scheduled.as_slice())?; // start

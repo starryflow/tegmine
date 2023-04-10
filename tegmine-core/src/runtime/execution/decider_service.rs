@@ -23,12 +23,13 @@ impl DeciderService {
     pub fn decide(workflow: &mut WorkflowModel) -> TegResult<DeciderOutcome> {
         // In case of a new workflow the list of tasks will be empty.
         let tasks = &workflow.tasks;
+
         // Filter the list of tasks and include only tasks that are not executed,
         // not marked to be skipped and not ready for rerun.
         // For a new workflow, the list of unprocessed_tasks will be empty
         let unprocessed_tasks = tasks
             .iter()
-            .filter(|&x| x.status != TaskStatus::Skipped && x.executed)
+            .filter(|&x| x.status != TaskStatus::Skipped && !x.executed)
             .collect::<Vec<_>>();
         debug!("find {} unprocessed tasks.", unprocessed_tasks.len());
 
