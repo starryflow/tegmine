@@ -43,6 +43,7 @@ rhai = { workspace = true }
 
 # Text processing  
 bstr = { workspace = true }
+fancy-regex = { workspace = true }
 regex = { workspace = true }
 smartstring = { workspace = true }
 

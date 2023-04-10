@@ -11,7 +11,7 @@ pub struct EvaluatorRegistry;
 static REGISTRY: Lazy<DashMap<InlineStr, Box<dyn Evaluator>>> = Lazy::new(|| {
     let map = DashMap::new();
     map.insert(
-        InlineStr::from("ValueParamEvaluator"),
+        InlineStr::from("value-param"),
         Box::new(ValueParamEvaluator) as Box<dyn Evaluator>,
     );
     map

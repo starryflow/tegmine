@@ -11,7 +11,7 @@ mod utils;
 pub use model::WorkflowStatus;
 pub use service::{ExecutionService, MetadataService, TaskService, WorkflowService};
 
-pub fn example() {
+pub fn init() {
     std::thread::spawn(|| runtime::Channel::handle_evaluation_event());
 
     std::thread::spawn(|| runtime::Channel::handle_creation_event());

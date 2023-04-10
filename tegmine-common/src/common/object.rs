@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use either::Either;
 use numtoa::NumToA;
 
-use crate::prelude::{fmt_err, ErrorCode, InlineStr, TegResult};
+use crate::prelude::{debug, fmt_err, ErrorCode, InlineStr, TegResult};
 
 #[derive(Clone, Debug)]
 pub enum Object {
@@ -42,9 +42,14 @@ impl Object {
             document_context.as_ref().right().expect("not none")
         };
 
-        if let Ok(json) = jsonpath_lib::select(&value, path) {
+        debug!("json for select is: {}", value);
+        if let Ok(json) = jsonpath_lib::select(&value, format!("$.{}", path).as_str()) {
             if let Some(&v) = json.get(0) {
-                return v.to_string().into();
+                if let serde_json::Value::String(v) = v {
+                    return v.into();
+                } else {
+                    return v.to_string().into();
+                }
             }
         }
         "".into()
@@ -66,8 +71,8 @@ impl Object {
 
     pub fn to_string(&self) -> InlineStr {
         match self {
-            Object::Int(v) => (*v).numtoa_str(10, &mut [0; 4]).into(),
-            Object::Long(v) => (*v).numtoa_str(10, &mut [0; 8]).into(),
+            Object::Int(v) => (*v).numtoa_str(10, &mut [0; 16]).into(),
+            Object::Long(v) => (*v).numtoa_str(10, &mut [0; 32]).into(),
             Object::Boolean(v) => {
                 if *v {
                     "True".into()

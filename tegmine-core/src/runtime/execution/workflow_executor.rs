@@ -362,6 +362,7 @@ impl WorkflowExecutor {
                         && !task.status.is_terminal()
                     {
                         let workflow_system_task = SystemTaskRegistry::get(&task.task_type)?;
+                        debug!("find SystemTask: {}", workflow_system_task.get_task_type());
                         if !workflow_system_task.value().as_ref().is_async()
                             && workflow_system_task.execute(&workflow, &mut task)
                         {
@@ -371,6 +372,10 @@ impl WorkflowExecutor {
                     }
                 }
 
+                debug!(
+                    "find {} tasks to be updated",
+                    outcome.tasks_to_be_updated.len()
+                );
                 if !outcome.tasks_to_be_updated.is_empty() || !tasks_to_be_scheduled_empty {
                     ExecutionDaoFacade::update_tasks(outcome.tasks_to_be_updated.clone());
                 }
@@ -396,7 +401,7 @@ impl WorkflowExecutor {
                         &mut workflow,
                         terminate_workflow_exception::STATUS
                             .with(|x| x.take())
-                            .expect("no terminate status"),
+                            .unwrap_or(WorkflowStatus::Failed),
                         terminate_workflow_exception::TASK.with(|x| x.take()).take(),
                         e.message().into(),
                     )?;

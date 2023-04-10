@@ -1,5 +1,5 @@
 use either::Either;
-use regex::Regex;
+use fancy_regex::Regex;
 use smartstring::SmartString;
 use tegmine_common::prelude::*;
 use tegmine_common::{EnvUtils, TaskDef, TaskUtils, WorkflowDef};
@@ -199,7 +199,33 @@ impl ParametersUtils {
                 Regex::new(r"\$\$\{").expect("regex compile error");
         }
 
-        let values = DOLLAR_REGEX.split(&param_string).collect::<Vec<_>>();
+        let mut values = Vec::default();
+        let mut matches = DOLLAR_REGEX.find_iter(&param_string);
+        let mut last = 0;
+        loop {
+            let text = matches.text();
+            match matches.next() {
+                None => {
+                    if last > text.len() {
+                        break;
+                    } else {
+                        let s = &text[last..];
+                        last = text.len() + 1; // Next call will return None
+                        debug!("find matched: {}", s);
+                        values.push(s);
+                    }
+                }
+                Some(Ok(m)) => {
+                    let matched = &text[last..m.start()];
+                    last = m.end();
+                    debug!("find matched: {}", matched);
+                    values.push(matched);
+                }
+                Some(Err(e)) => {
+                    error!("regex match failed, error: {}", e);
+                }
+            }
+        }
         let mut converted_values = Vec::with_capacity(values.len());
         for v in values {
             if v.starts_with("${") && v.ends_with("}") {

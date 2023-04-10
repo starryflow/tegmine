@@ -5,7 +5,7 @@ use tegmine_common::TaskType;
 use super::{TaskMapper, TaskMapperContext};
 use crate::model::{TaskModel, TaskStatus};
 use crate::runtime::execution::evaluators::EvaluatorRegistry;
-use crate::runtime::execution::{terminate_workflow_exception, DeciderService};
+use crate::runtime::execution::DeciderService;
 
 /// An implementation of `TaskMapper` to map a `WorkflowTask` of type `TaskType::SWITCH` to a List
 /// `TaskModel` starting with Task of type `TaskType#SWITCH` which is marked as IN_PROGRESS,
@@ -37,7 +37,6 @@ impl TaskMapper for SwitchTaskMapper {
                 "No evaluator registered for type: {}",
                 workflow_task.evaluator_type
             );
-            terminate_workflow_exception::STATUS.with(|x| x.take());
             return fmt_err!(
                 TerminateWorkflow,
                 "No evaluator registered for type: {}",
@@ -49,6 +48,7 @@ impl TaskMapper for SwitchTaskMapper {
             .evaluate(&workflow_task.expression, &task_input)?
             .as_string()?
             .clone();
+        debug!("eval_result is: {}", eval_result);
 
         let mut switch_task = task_mapper_context.create_task_model(TaskStatus::InProgress);
         switch_task.task_type = TaskType::Switch.as_ref().into();
@@ -64,6 +64,7 @@ impl TaskMapper for SwitchTaskMapper {
         tasks_to_be_scheduled.push(switch_task);
 
         // get the list of tasks based on the evaluated expression
+        debug!("decision_case is: {:?}", workflow_task.decision_cases);
         let selected_tasks =
             if let Some(selected_task) = workflow_task.decision_cases.get(&eval_result) {
                 if !selected_task.is_empty() {

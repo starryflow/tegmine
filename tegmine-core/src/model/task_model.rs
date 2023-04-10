@@ -117,7 +117,7 @@ impl TaskModel {
     pub fn get_task_key(&self) -> InlineStr {
         let mut task_name = self.reference_task_name.clone();
         task_name.push_str("_");
-        task_name.push_str(self.retry_count.numtoa_str(10, &mut [0u8; 4]));
+        task_name.push_str(self.retry_count.numtoa_str(10, &mut [0u8; 16]));
         task_name
     }
 

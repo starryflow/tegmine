@@ -6,6 +6,10 @@ use tegmine_core::{ExecutionService, WorkflowService};
 
 #[test]
 fn start_workflow() {
+    let _ = env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug"))
+        .is_test(true)
+        .try_init();
+
     let start_workflow_request = r#"
     {
         "name": "my_adhoc_unregistered_workflow",  
@@ -18,37 +22,54 @@ fn start_workflow() {
             "version": 1,
             "tasks": [
                 {
-                    "name": "fetch_data",
-                    "type": "HTTP",
-                    "taskReferenceName": "fetch_data",
+                    "name": "switch_by_param",
+                    "taskReferenceName": "switch_by_param",
+                    "type": "SWITCH",
+                    "evaluatorType": "value-param",
+                    "expression": "switchCaseValue",
                     "inputParameters": {
-                        "http_request": {
-                            "connectionTimeOut": "3600",
-                            "readTimeOut": "3600",
-                            "uri": "${workflow.input.uri}",
-                            "method": "GET",
-                            "accept": "application/json",
-                            "content-Type": "application/json",
-                            "headers": { }
-                        }
+                        "switchCaseValue": "${workflow.input.service}"
                     },
-                    "taskDefinition": {
-                        "name": "fetch_data",
-                        "retryCount": 0,
-                        "timeoutSeconds": 3600,
-                        "timeoutPolicy": "TIME_OUT_WF",
-                        "retryLogic": "FIXED",
-                        "retryDelaySeconds": 0,
-                        "responseTimeoutSeconds": 3000
-                    }
+                    "decisionCases": {
+                        "fedex": [
+                            {
+                                "name": "Set_Name_fedex",
+                                "taskReferenceName": "Set_Name_fedex",
+                                "type": "SET_VARIABLE",
+                                "inputParameters": {
+                                    "name": "Foo"
+                                }
+                            }
+                        ],
+                        "ups": [
+                            {
+                                "name": "Set_Name_ups",
+                                "taskReferenceName": "Set_Name_ups",
+                                "type": "SET_VARIABLE",
+                                "inputParameters": {
+                                    "name": "Bar"
+                                }
+                            }
+                        ]
+                    },
+                    "defaultCase": [
+                        {
+                            "name": "Set_Name_default",
+                            "taskReferenceName": "Set_Name_default",
+                            "type": "SET_VARIABLE",
+                            "inputParameters": {
+                                "name": "Default"
+                            }
+                        }
+                    ]
                 }
             ],
             "outputParameters": {
+                "output": "${workflow.variables.name}"
             }
         },
         "input": {  
-            "param1": "value1",
-            "param2": "value2"
+            "service": "ups"
         }
     }"#;
     let start_workflow_request: serde_json::Value =
@@ -56,16 +77,24 @@ fn start_workflow() {
     let start_workflow_request: StartWorkflowRequest = start_workflow_request
         .try_into()
         .expect("parse StartWorkflowRequest failed");
+
     let workflow_instance_id =
         WorkflowService::start_workflow(start_workflow_request).expect("start_workflow failed");
     eprintln!("workflow_instance_id is: {}", workflow_instance_id);
 
+    tegmine_core::init();
+
     let mut workflow = ExecutionService::get_execution_status(workflow_instance_id.as_str(), false)
         .expect("get_execution_status failed");
+    let mut wait_times = 3000;
     while !workflow.status.is_terminal() {
         thread::sleep(Duration::from_millis(100));
         workflow = ExecutionService::get_execution_status(workflow_instance_id.as_str(), false)
             .expect("get_execution_status failed");
+        wait_times -= 1;
+        if wait_times == 0 {
+            break;
+        }
     }
 
     if workflow.status.is_successful() {

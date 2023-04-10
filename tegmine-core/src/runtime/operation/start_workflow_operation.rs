@@ -53,7 +53,7 @@ impl StartWorkflowOperation {
         // Persist the Workflow
         let mut workflow = WorkflowModel::new(workflow_id.clone(), workflow_definition, input);
 
-        if workflow_input.is_empty() {
+        if !workflow_input.is_empty() {
             ParametersUtils::get_workflow_input(&workflow.workflow_definition, &mut workflow_input);
             workflow.input = workflow_input;
         } else {

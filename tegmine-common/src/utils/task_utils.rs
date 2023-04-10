@@ -9,7 +9,7 @@ impl TaskUtils {
 
     pub fn append_iteration(name: &mut InlineStr, iteration: i32) {
         name.push_str(Self::LOOP_TASK_DELIMITER);
-        name.push_str(iteration.numtoa_str(10, &mut [0; 4]))
+        name.push_str(iteration.numtoa_str(10, &mut [0; 16]))
     }
 
     pub fn remove_iteration_from_task_ref_name(reference_task_name: &str) -> &str {

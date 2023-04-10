@@ -30,6 +30,7 @@ impl DeciderService {
             .iter()
             .filter(|&x| x.status != TaskStatus::Skipped && x.executed)
             .collect::<Vec<_>>();
+        debug!("find {} unprocessed tasks.", unprocessed_tasks.len());
 
         let mut tasks_to_be_scheduled = Vec::default();
         if unprocessed_tasks.is_empty() {
@@ -759,12 +760,14 @@ impl DeciderService {
         retry_count: i32,
         retried_task_id: &str,
     ) -> TegResult<Vec<TaskModel>> {
+        debug!("before get_task_input: {:?}", workflow.input);
         let input = ParametersUtils::get_task_input(
             &task_to_schedule.input_parameters,
             workflow,
             None,
             None,
         )?;
+        debug!("get_task_input: {:?}", input);
 
         // get tasks already scheduled (in progress/terminal) for  this workflow instance
         let tasks_in_workflow = workflow
@@ -795,7 +798,7 @@ impl DeciderService {
         Ok(TaskMapperRegistry::get_task_mapper(&task_to_schedule.type_)
             .get_mapped_tasks(task_mapper_context)?
             .into_iter()
-            .filter(|x| tasks_in_workflow.contains(&&x.reference_task_name))
+            .filter(|x| !tasks_in_workflow.contains(&&x.reference_task_name))
             .collect::<Vec<_>>())
     }
 
@@ -814,7 +817,6 @@ impl DeciderService {
                 }
                 Ok(None) => Ok(false),
                 Err(e) => {
-                    terminate_workflow_exception::STATUS.with(|x| x.take());
                     str_err!(TerminateWorkflow, e.message())
                 }
             }

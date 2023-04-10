@@ -164,10 +164,11 @@ impl ExecutionDao {
             );
         }
 
-        let task_ids = WORKFLOW_TO_TASKS
-            .entry(task.workflow_instance_id.clone())
-            .or_default();
-        if !task_ids.contains(&task.task_id) {
+        let not_exist = WORKFLOW_TO_TASKS
+            .get(&task.workflow_instance_id)
+            .map(|x| !x.value().contains(&task.task_id))
+            .unwrap_or(true);
+        if not_exist {
             Self::correlate_task_to_workflow_in_ds(&task.task_id, &task.workflow_instance_id);
         }
 
