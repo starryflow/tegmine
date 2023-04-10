@@ -88,12 +88,10 @@ impl StartWorkflowOperation {
     ///
     /// This is to ensure that workflow creation action precedes any other action on a given
     /// workflow.
-    fn create_and_evaluate(workflow: WorkflowModel) -> TegResult<()> {
+    fn create_and_evaluate(mut workflow: WorkflowModel) -> TegResult<()> {
         // executionLockService.acquireLock(workflow.getWorkflowId()))
 
-        let mut workflow = ExecutionDaoFacade::create_workflow(workflow)
-            .value()
-            .clone();
+        ExecutionDaoFacade::create_workflow(&mut workflow);
         debug!(
             "A new instance of workflow: {} created with id: {}",
             &workflow.workflow_definition.name, workflow.workflow_id

@@ -14,7 +14,7 @@ pub trait WorkflowSystemTask: Send + Sync {
     /// "Execute" the task.
     /// Called after `start(WorkflowModel, TaskModel, WorkflowExecutor)`, if the task status is not
     /// terminal. Can be called more than once.
-    fn execute(&self, _workflow: &WorkflowModel, _task: &mut TaskModel) -> bool {
+    fn execute(&self, _workflow: &mut WorkflowModel, _task: &mut TaskModel) -> bool {
         false
     }
 

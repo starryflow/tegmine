@@ -51,13 +51,9 @@ impl ExecutionDao {
 
     // getTasks
 
-    pub fn create_tasks(
-        tasks: &mut [&mut TaskModel],
-    ) -> TegResult<Vec<Ref<'static, InlineStr, TaskModel>>> {
-        let mut task_refs = Vec::with_capacity(tasks.len());
-
+    pub fn create_tasks(tasks: &mut [&mut TaskModel]) -> TegResult<()> {
         for task in tasks {
-            Self::validate(&task)?;
+            Self::validate(task)?;
 
             let task_key = task.get_task_key();
 
@@ -93,13 +89,13 @@ impl ExecutionDao {
                 task.task_def_name, task.workflow_instance_id, task.task_id, task.task_type
             );
 
-            task_refs.push(Self::update_task_ref(task));
+            Self::update_task(task);
         }
 
-        Ok(task_refs)
+        Ok(())
     }
 
-    pub fn update_task_ref(task: &mut TaskModel) -> Ref<'static, InlineStr, TaskModel> {
+    pub fn update_task(task: &mut TaskModel) {
         let task_id = task.task_id.clone();
         let task_definition = task.get_task_definition();
 
@@ -144,7 +140,7 @@ impl ExecutionDao {
         }
 
         TASK.insert(task_id.clone(), task.clone());
-        let task = TASK.get(&task_id).expect("not none");
+
         debug!(
             "Workflow task payload saved to TASK with taskKey: {}, workflowId: {}, taskId: {}, taskType: {} during updateTask",
             task.task_id, task.workflow_instance_id, task.task_id, task.task_type
@@ -171,8 +167,6 @@ impl ExecutionDao {
         if not_exist {
             Self::correlate_task_to_workflow_in_ds(&task.task_id, &task.workflow_instance_id);
         }
-
-        task
     }
 
     // exceedsLimit
@@ -258,11 +252,11 @@ impl ExecutionDao {
     /// ******************************************
 
     /// return Id of the newly created workflow
-    pub fn create_workflow(workflow: WorkflowModel) -> Ref<'static, InlineStr, WorkflowModel> {
+    pub fn create_workflow(workflow: &WorkflowModel) {
         Self::insert_or_update_workflow(workflow, false)
     }
 
-    pub fn update_workflow(workflow: WorkflowModel) -> Ref<'static, InlineStr, WorkflowModel> {
+    pub fn update_workflow(workflow: &WorkflowModel) {
         Self::insert_or_update_workflow(workflow, true)
     }
 
@@ -370,16 +364,13 @@ impl ExecutionDao {
 
     /// Inserts a new workflow/ updates an existing workflow in the datastore. Additionally, if a
     /// workflow is in terminal state, it is removed from the set of pending workflows.
-    fn insert_or_update_workflow(
-        mut workflow: WorkflowModel,
-        update: bool,
-    ) -> Ref<'static, InlineStr, WorkflowModel> {
+    fn insert_or_update_workflow(workflow: &WorkflowModel, update: bool) {
         let workflow_id = workflow.workflow_id.clone();
 
         // Store the workflow object
-        workflow.tasks.clear();
-        WORKFLOW.insert(workflow_id.clone(), workflow);
-        let workflow = WORKFLOW.get(&workflow_id).expect("always not empty");
+        let mut cloned_workflow = workflow.clone();
+        cloned_workflow.tasks.clear();
+        WORKFLOW.insert(workflow_id.clone(), cloned_workflow);
 
         if !update {
             // Add to list of workflows for a workflow_def
@@ -410,8 +401,6 @@ impl ExecutionDao {
                 .or_default()
                 .push(workflow_id.clone())
         }
-
-        workflow
     }
 
     /// Stores the correlation of a task to the workflow instance in the datastore

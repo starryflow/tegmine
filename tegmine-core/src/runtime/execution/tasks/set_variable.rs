@@ -29,9 +29,7 @@ impl WorkflowSystemTask for SetVariable {
         TaskType::SetVariable.as_ref()
     }
 
-    fn execute(&self, workflow: &WorkflowModel, task: &mut TaskModel) -> bool {
-        let mut workflow = workflow.clone();
-
+    fn execute(&self, workflow: &mut WorkflowModel, task: &mut TaskModel) -> bool {
         if !task.input_data.is_empty() {
             let mut new_keys = Vec::default();
             let mut previous_values: HashMap<InlineStr, Object> = HashMap::default();

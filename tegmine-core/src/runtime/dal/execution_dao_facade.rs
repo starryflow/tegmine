@@ -1,5 +1,4 @@
 use chrono::Utc;
-use dashmap::mapref::one::Ref;
 use tegmine_common::prelude::*;
 
 use crate::config::Properties;
@@ -76,39 +75,36 @@ impl ExecutionDaoFacade {
 
     /// Creates a new workflow in the data store
     /// return the id of the created workflow
-    pub fn create_workflow(
-        mut workflow_model: WorkflowModel,
-    ) -> Ref<'static, InlineStr, WorkflowModel> {
-        Self::externalize_workflow_data(&mut workflow_model);
-        let workflow = ExecutionDao::create_workflow(workflow_model);
+    pub fn create_workflow(workflow_model: &mut WorkflowModel) {
+        Self::externalize_workflow_data(workflow_model);
+        ExecutionDao::create_workflow(workflow_model);
 
         // Add to decider queue
         QueueDao::push(
             QueueDao::DECIDER_QUEUE,
-            &workflow.workflow_id,
-            workflow.priority,
+            &workflow_model.workflow_id,
+            workflow_model.priority,
             Properties::get_workflow_offset_timeout_sec(),
         );
         if Properties::is_async_indexing_enabled() {
-            IndexDao::async_index_workflow(WorkflowSummary::new(workflow.value().clone()));
+            IndexDao::async_index_workflow(WorkflowSummary::new(workflow_model.clone()));
         } else {
-            IndexDao::index_workflow(WorkflowSummary::new(workflow.value().clone()));
+            IndexDao::index_workflow(WorkflowSummary::new(workflow_model.clone()));
         }
-        workflow
     }
 
     /// Updates the given workflow in the data store
-    pub fn update_workflow(mut workflow_model: WorkflowModel) {
+    pub fn update_workflow(workflow_model: &mut WorkflowModel) {
         workflow_model.updated_time = Utc::now().timestamp_millis();
         if workflow_model.status.is_terminal() {
             workflow_model.end_time = Utc::now().timestamp_millis();
         }
         Self::externalize_workflow_data(&workflow_model);
-        let workflow = ExecutionDao::update_workflow(workflow_model);
+        ExecutionDao::update_workflow(workflow_model);
         if Properties::is_async_indexing_enabled() {
             unimplemented!()
         } else {
-            IndexDao::index_workflow(WorkflowSummary::new(workflow.value().clone()));
+            IndexDao::index_workflow(WorkflowSummary::new(workflow_model.clone()));
         }
     }
 
@@ -193,9 +189,7 @@ impl ExecutionDaoFacade {
 
     // getInProgressTaskCount
 
-    pub fn create_tasks(
-        tasks: &mut [&mut TaskModel],
-    ) -> TegResult<Vec<Ref<'static, InlineStr, TaskModel>>> {
+    pub fn create_tasks(tasks: &mut [&mut TaskModel]) -> TegResult<()> {
         tasks.iter().for_each(|x| Self::externalize_task_data(x));
         ExecutionDao::create_tasks(tasks)
     }
@@ -222,7 +216,7 @@ impl ExecutionDaoFacade {
         }
 
         Self::externalize_task_data(&task_model);
-        let task_model = ExecutionDao::update_task_ref(task_model);
+        ExecutionDao::update_task(task_model);
 
         // Indexing a task for every update adds a lot of volume. That is ok but if async indexing
         // is enabled and tasks are stored in memory until a block has completed, we would lose a

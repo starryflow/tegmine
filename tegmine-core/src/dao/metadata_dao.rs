@@ -20,20 +20,19 @@ impl MetadataDao {
     /// ******************************************
     /// *************** TaskDef **************
     /// ******************************************
-    pub fn create_task_def(task_def: TaskDef) -> Ref<'static, InlineStr, TaskDef> {
+    pub fn create_task_def(task_def: TaskDef) {
         Self::insert_or_update_task_def(task_def)
     }
 
-    pub fn update_task_def(task_def: TaskDef) -> Ref<'static, InlineStr, TaskDef> {
+    pub fn update_task_def(task_def: TaskDef) {
         Self::insert_or_update_task_def(task_def)
     }
 
-    fn insert_or_update_task_def(task_def: TaskDef) -> Ref<'static, InlineStr, TaskDef> {
+    fn insert_or_update_task_def(task_def: TaskDef) {
         let task_name = task_def.name.clone();
 
         // Store all task def in under one key
         TASK_DEF.insert(task_name.clone(), task_def);
-        TASK_DEF.get(&task_name).expect("always not empty")
     }
 
     pub fn get_task_def(name: &InlineStr) -> Option<Ref<'static, InlineStr, TaskDef>> {

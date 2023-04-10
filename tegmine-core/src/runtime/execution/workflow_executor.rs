@@ -139,7 +139,7 @@ impl WorkflowExecutor {
                 .collect::<HashSet<_>>(),
         );
 
-        ExecutionDaoFacade::update_workflow(workflow.clone());
+        ExecutionDaoFacade::update_workflow(workflow);
         debug!(
             "Completed workflow execution for {}",
             workflow.workflow_id.clone()
@@ -218,7 +218,7 @@ impl WorkflowExecutor {
 
         let workflow_id = workflow.workflow_id.clone();
         workflow.reason_for_incompletion = reason.clone();
-        ExecutionDaoFacade::update_workflow(workflow.clone());
+        ExecutionDaoFacade::update_workflow(workflow);
         //  workflowStatusListener.onWorkflowTerminatedIfEnabled(workflow);
         // Monitors.recordWorkflowTermination(
         info!(
@@ -291,7 +291,7 @@ impl WorkflowExecutor {
             workflow
                 .output
                 .insert("tegmine.failure_workflow".into(), failure_wf_id.into());
-            ExecutionDaoFacade::update_workflow(workflow.clone());
+            ExecutionDaoFacade::update_workflow(workflow);
         }
         ExecutionDaoFacade::remove_from_pending_workflow(
             &workflow.workflow_definition.name,
@@ -362,7 +362,7 @@ impl WorkflowExecutor {
                         let workflow_system_task = SystemTaskRegistry::get(&task.task_type)?;
                         debug!("find SystemTask: {}", workflow_system_task.get_task_type());
                         if !workflow_system_task.value().as_ref().is_async()
-                            && workflow_system_task.execute(&workflow, task)
+                            && workflow_system_task.execute(&mut workflow, task)
                         {
                             outcome.tasks_to_be_updated.push(task);
                             state_changed = true;
@@ -383,7 +383,7 @@ impl WorkflowExecutor {
                 }
 
                 if !outcome.tasks_to_be_updated.is_empty() || !tasks_to_be_scheduled.is_empty() {
-                    ExecutionDaoFacade::update_workflow(workflow);
+                    ExecutionDaoFacade::update_workflow(&mut workflow);
                 }
 
                 Ok(())

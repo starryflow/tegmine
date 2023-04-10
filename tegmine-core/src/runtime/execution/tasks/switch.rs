@@ -10,7 +10,7 @@ impl WorkflowSystemTask for Switch {
         TaskType::Switch.as_ref()
     }
 
-    fn execute(&self, _workflow: &WorkflowModel, task: &mut TaskModel) -> bool {
+    fn execute(&self, _workflow: &mut WorkflowModel, task: &mut TaskModel) -> bool {
         task.status = TaskStatus::Completed;
         true
     }

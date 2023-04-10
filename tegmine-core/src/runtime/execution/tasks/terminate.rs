@@ -16,7 +16,7 @@ impl WorkflowSystemTask for Terminate {
         TaskType::Terminate.as_ref()
     }
 
-    fn execute(&self, _workflow: &WorkflowModel, task: &mut TaskModel) -> bool {
+    fn execute(&self, _workflow: &mut WorkflowModel, task: &mut TaskModel) -> bool {
         let return_status = task
             .input_data
             .get(Self::TERMINATION_STATUS_PARAMETER)
