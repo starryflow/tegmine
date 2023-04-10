@@ -29,4 +29,13 @@ impl Channel {
             let _ = WorkflowExecutor::handle_workflow_evaluation_event(wee);
         }
     }
+
+    pub fn evaluate_once() -> TegResult<()> {
+        let wee = EVAL_EVENT_CHANNEL
+            .1
+            .try_recv()
+            .map_err(|_| ErrorCode::NotFound("Evaluation Event not found"))?;
+        WorkflowExecutor::handle_workflow_evaluation_event(wee)?;
+        Ok(())
+    }
 }

@@ -1,6 +1,3 @@
-use std::thread;
-use std::time::Duration;
-
 use tegmine_common::StartWorkflowRequest;
 use tegmine_core::{ExecutionService, WorkflowService};
 
@@ -82,22 +79,12 @@ fn start_workflow() {
         WorkflowService::start_workflow(start_workflow_request).expect("start_workflow failed");
     eprintln!("workflow_instance_id is: {}", workflow_instance_id);
 
-    tegmine_core::init();
+    tegmine_core::evaluate_once().expect("evaluation failed");
 
-    let mut workflow = ExecutionService::get_execution_status(workflow_instance_id.as_str(), false)
+    let workflow = ExecutionService::get_execution_status(workflow_instance_id.as_str(), false)
         .expect("get_execution_status failed");
-    let mut wait_times = 3000;
-    while !workflow.status.is_terminal() {
-        thread::sleep(Duration::from_millis(100));
-        workflow = ExecutionService::get_execution_status(workflow_instance_id.as_str(), false)
-            .expect("get_execution_status failed");
-        wait_times -= 1;
-        if wait_times == 0 {
-            break;
-        }
-    }
 
-    if workflow.status.is_successful() {
+    if workflow.status.is_terminal() && workflow.status.is_successful() {
         eprintln!("workflow execute successful");
         eprintln!("output: {:?}", workflow.workflow.expect("not none").output);
     } else {

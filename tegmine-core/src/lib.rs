@@ -11,10 +11,18 @@ mod utils;
 pub use model::WorkflowStatus;
 pub use service::{ExecutionService, MetadataService, TaskService, WorkflowService};
 
-pub fn init() {
-    std::thread::spawn(|| runtime::Channel::handle_evaluation_event());
+pub fn spawn_event_loop() {
+    std::thread::spawn(|| loop {
+        runtime::Channel::handle_evaluation_event()
+    });
 
-    std::thread::spawn(|| runtime::Channel::handle_creation_event());
+    std::thread::spawn(|| loop {
+        runtime::Channel::handle_creation_event()
+    });
+}
+
+pub fn evaluate_once() -> tegmine_common::prelude::TegResult<()> {
+    runtime::Channel::evaluate_once()
 }
 
 #[cfg(test)]
