@@ -1,3 +1,5 @@
+use linked_hash_map::LinkedHashMap;
+
 use crate::metadata::tasks::TaskDef;
 use crate::prelude::*;
 use crate::TaskType;
@@ -38,7 +40,7 @@ pub struct WorkflowTask {
     pub expression: InlineStr,
     /// Map where the keys are the possible values that can result from expression being evaluated
     /// by evaluatorType with values being lists of tasks to be executed.
-    pub decision_cases: HashMap<InlineStr, Vec<WorkflowTask>>,
+    pub decision_cases: LinkedHashMap<InlineStr, Vec<WorkflowTask>>,
     /// List of tasks to be executed when no matching value if found in decisionCases
     pub default_case: Vec<WorkflowTask>,
 
@@ -102,7 +104,9 @@ impl WorkflowTask {
         let mut workflow_task_lists = Vec::default();
         match TaskType::of(self.type_.as_str()) {
             TaskType::Decision | TaskType::Switch => {
-                workflow_task_lists.extend(self.decision_cases.values_mut());
+                for (_, tasks) in self.decision_cases.iter_mut() {
+                    workflow_task_lists.push(tasks);
+                }
                 workflow_task_lists.push(&mut self.default_case);
             }
             // TaskType::ForkJoin => workflow_task_lists.extend(&mut self.fork_tasks),
@@ -376,7 +380,7 @@ impl WorkflowTask {
     ) -> TegResult<(
         InlineStr,
         InlineStr,
-        HashMap<InlineStr, Vec<WorkflowTask>>,
+        LinkedHashMap<InlineStr, Vec<WorkflowTask>>,
         Vec<WorkflowTask>,
     )> {
         if type_.eq("SWITCH") {
@@ -437,7 +441,7 @@ impl WorkflowTask {
             Ok((
                 InlineStr::default(),
                 InlineStr::default(),
-                HashMap::default(),
+                LinkedHashMap::default(),
                 Vec::default(),
             ))
         }
@@ -445,8 +449,8 @@ impl WorkflowTask {
 
     fn decision_case_try_from(
         jsonmap: &serde_json::Map<String, serde_json::Value>,
-    ) -> TegResult<HashMap<InlineStr, Vec<Self>>> {
-        let mut tasks = HashMap::with_capacity(jsonmap.len());
+    ) -> TegResult<LinkedHashMap<InlineStr, Vec<Self>>> {
+        let mut tasks = LinkedHashMap::with_capacity(jsonmap.len());
         for (k, v) in jsonmap {
             let jsonlist = v.as_array().ok_or(ErrorCode::IllegalArgument(
                 "WorkflowTask: decisionCases invalid",

@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 
 use chrono::Utc;
+use linked_hash_map::LinkedHashMap;
 use tegmine_common::prelude::*;
 use tegmine_common::{
     RetryLogic, TaskDef, TaskTimeoutPolicy, TaskType, TaskUtils, TimeoutPolicy, WorkflowTask,
@@ -89,7 +90,7 @@ impl DeciderService {
             }
         }
 
-        let mut tasks_to_be_scheduled = HashMap::new();
+        let mut tasks_to_be_scheduled = LinkedHashMap::new();
         for pre_scheduled_task in pre_scheduled_tasks {
             tasks_to_be_scheduled.insert(
                 pre_scheduled_task.reference_task_name.clone(),
@@ -103,10 +104,12 @@ impl DeciderService {
             if SystemTaskRegistry::is_system_task(&pending_task.task_type)
                 && !pending_task.status.is_terminal()
             {
-                let _ = tasks_to_be_scheduled.try_insert(
-                    pending_task.reference_task_name.clone(),
-                    pending_task.clone(),
-                );
+                if !tasks_to_be_scheduled.contains_key(&pending_task.reference_task_name) {
+                    tasks_to_be_scheduled.insert(
+                        pending_task.reference_task_name.clone(),
+                        pending_task.clone(),
+                    );
+                }
                 executed_task_ref_names.remove(&pending_task.reference_task_name);
             }
 
@@ -176,8 +179,10 @@ impl DeciderService {
                     workflow.workflow_id
                 );
                 for next_task in next_tasks {
-                    let _ = tasks_to_be_scheduled
-                        .try_insert(next_task.reference_task_name.clone(), next_task);
+                    if !tasks_to_be_scheduled.contains_key(&next_task.reference_task_name) {
+                        tasks_to_be_scheduled
+                            .insert(next_task.reference_task_name.clone(), next_task);
+                    }
                 }
                 out_come.tasks_to_be_updated.push(pending_task);
             }
@@ -185,7 +190,8 @@ impl DeciderService {
 
         // All the tasks that need to scheduled are added to the outcome, in case of
         let un_scheduled_tasks = tasks_to_be_scheduled
-            .into_values()
+            .into_iter()
+            .map(|(_, v)| v)
             .filter(|x| !executed_task_ref_names.contains(&x.reference_task_name))
             .collect::<Vec<_>>();
         if !un_scheduled_tasks.is_empty() {

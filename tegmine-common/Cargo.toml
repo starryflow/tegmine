@@ -24,7 +24,8 @@ crossbeam-channel = "0.5"
 parking_lot = { workspace = true }
 
 # Data structures 
-either = "1.8.0"
+linked-hash-map = { workspace = true }
+either = { workspace = true }
 
 # Development tools
 jsonpath_lib = { workspace = true }
