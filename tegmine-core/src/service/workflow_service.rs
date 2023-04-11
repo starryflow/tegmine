@@ -4,6 +4,7 @@ use tegmine_common::{RerunWorkflowRequest, SkipTaskRequest, StartWorkflowRequest
 use super::ExecutionService;
 use crate::model::Workflow;
 use crate::runtime::StartWorkflowOperation;
+use crate::WorkflowStatus;
 
 pub struct WorkflowService;
 
@@ -34,7 +35,7 @@ impl WorkflowService {
         &self,
         workflow_id: &str,
         include_tasks: bool,
-    ) -> TegResult<Workflow> {
+    ) -> TegResult<(WorkflowStatus, Option<Workflow>)> {
         ExecutionService::get_execution_status(workflow_id, include_tasks)
     }
 

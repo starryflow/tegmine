@@ -81,12 +81,13 @@ fn start_workflow() {
 
     tegmine_core::evaluate_once().expect("evaluation failed");
 
-    let workflow = ExecutionService::get_execution_status(workflow_instance_id.as_str(), false)
-        .expect("get_execution_status failed");
+    let (workflow_status, workflow) =
+        ExecutionService::get_execution_status(workflow_instance_id.as_str(), false)
+            .expect("get_execution_status failed");
 
-    if workflow.status.is_terminal() && workflow.status.is_successful() {
+    if workflow_status.is_terminal() && workflow_status.is_successful() {
         eprintln!("workflow execute successful");
-        eprintln!("output: {:?}", workflow.workflow.expect("not none").output);
+        eprintln!("output: {:?}", workflow.expect("not none").workflow.output);
     } else {
         assert!(false, "workflow execute failed");
     }

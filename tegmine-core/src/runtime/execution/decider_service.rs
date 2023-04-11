@@ -185,9 +185,8 @@ impl DeciderService {
 
         // All the tasks that need to scheduled are added to the outcome, in case of
         let un_scheduled_tasks = tasks_to_be_scheduled
-            .values()
+            .into_values()
             .filter(|x| !executed_task_ref_names.contains(&x.reference_task_name))
-            .map(|x| x.clone())
             .collect::<Vec<_>>();
         if !un_scheduled_tasks.is_empty() {
             debug!(
@@ -230,9 +229,8 @@ impl DeciderService {
             .collect::<HashSet<_>>();
 
         tasks
-            .iter()
+            .into_iter()
             .filter(|x| !tasks_in_workflow.contains(&x.reference_task_name))
-            .map(|x| x.clone())
             .collect()
     }
 

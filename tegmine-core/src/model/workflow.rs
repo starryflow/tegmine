@@ -1,24 +1,14 @@
 use strum_macros::*;
 
-use super::{TaskModel, WorkflowModel};
+use super::WorkflowModel;
 
 pub struct Workflow {
-    pub status: WorkflowStatus,
-    pub workflow: Option<WorkflowModel>,
-    pub tasks: Vec<TaskModel>,
+    pub workflow: WorkflowModel,
 }
 
 impl Workflow {
-    pub fn new(
-        status: WorkflowStatus,
-        workflow: Option<WorkflowModel>,
-        tasks: Vec<TaskModel>,
-    ) -> Self {
-        Self {
-            status,
-            workflow,
-            tasks,
-        }
+    pub fn new(workflow: WorkflowModel) -> Self {
+        Self { workflow }
     }
 }
 

@@ -1,9 +1,9 @@
 use chrono::Utc;
-use dashmap::mapref::one::Ref;
 use dashmap::DashMap;
 use tegmine_common::prelude::*;
 
 use crate::model::{TaskModel, TaskStatus, WorkflowModel};
+use crate::WorkflowStatus;
 
 /// Data access layer for storing workflow executions
 pub struct ExecutionDao;
@@ -203,25 +203,15 @@ impl ExecutionDao {
 
     // removeTaskWithExpiry
 
-    pub fn get_task(task_id: &InlineStr) -> Option<Ref<InlineStr, TaskModel>> {
-        TASK.get(task_id)
+    pub fn get_task(task_id: &InlineStr) -> Option<TaskModel> {
+        TASK.get(task_id).map(|x| x.clone())
     }
 
     pub fn get_tasks(task_ids: Vec<InlineStr>) -> Vec<TaskModel> {
         let mut tasks = Vec::with_capacity(task_ids.len());
         for task_id in &task_ids {
             if let Some(task) = TASK.get(task_id) {
-                tasks.push(task.value().clone());
-            }
-        }
-        tasks
-    }
-
-    pub fn get_tasks_ref(task_ids: Vec<InlineStr>) -> Vec<Ref<'static, InlineStr, TaskModel>> {
-        let mut tasks = Vec::with_capacity(task_ids.len());
-        for task_id in &task_ids {
-            if let Some(task) = TASK.get(task_id) {
-                tasks.push(task);
+                tasks.push(task.clone());
             }
         }
         tasks
@@ -233,16 +223,6 @@ impl ExecutionDao {
             .map(|x| x.value().clone())
             .unwrap_or_default();
         Self::get_tasks(task_ids)
-    }
-
-    pub fn get_tasks_for_workflow_ref(
-        workflow_id: &InlineStr,
-    ) -> Vec<Ref<'static, InlineStr, TaskModel>> {
-        let task_ids = WORKFLOW_TO_TASKS
-            .get(workflow_id)
-            .map(|x| x.value().clone())
-            .unwrap_or_default();
-        Self::get_tasks_ref(task_ids)
     }
 
     // getPendingTasksForTaskType
@@ -262,7 +242,7 @@ impl ExecutionDao {
 
     /// return true if the deletion is successful, false otherwise
     pub fn remove_workflow(workflow_id: &InlineStr) -> bool {
-        if let Some((workflow, tasks)) = Self::get_workflow_ref(workflow_id) {
+        if let Some(workflow) = Self::get_workflow(workflow_id) {
             // Remove from lists
             WORKFLOW_DEF_TO_WORKFLOWS
                 .get_mut(&(
@@ -281,7 +261,7 @@ impl ExecutionDao {
             let _ = WORKFLOW.remove(workflow_id);
 
             // Remove task
-            for task in &tasks {
+            for task in &workflow.tasks {
                 Self::remove_task(&task.task_id);
             }
             true
@@ -299,18 +279,12 @@ impl ExecutionDao {
             .map(|mut x| x.retain(|x| !x.eq(workflow_id)));
     }
 
-    #[allow(unused)]
-    pub fn get_workflow(workflow_id: &InlineStr) -> Option<WorkflowModel> {
-        Self::get_workflow_include_tasks(workflow_id, true)
+    pub fn get_workflow_status(workflow_id: &InlineStr) -> Option<WorkflowStatus> {
+        WORKFLOW.get(workflow_id).map(|x| x.status)
     }
 
-    pub fn get_workflow_ref(
-        workflow_id: &InlineStr,
-    ) -> Option<(
-        Ref<InlineStr, WorkflowModel>,
-        Vec<Ref<InlineStr, TaskModel>>,
-    )> {
-        Self::get_workflow_include_tasks_ref(workflow_id, true)
+    pub fn get_workflow(workflow_id: &InlineStr) -> Option<WorkflowModel> {
+        Self::get_workflow_include_tasks(workflow_id, true)
     }
 
     pub fn get_workflow_include_tasks(
@@ -318,35 +292,13 @@ impl ExecutionDao {
         include_tasks: bool,
     ) -> Option<WorkflowModel> {
         if let Some(workflow) = WORKFLOW.get(workflow_id) {
-            let mut workflow_mut = workflow.clone();
+            let mut workflow = workflow.clone();
             if include_tasks {
                 let mut tasks = Self::get_tasks_for_workflow(workflow_id);
                 tasks.sort_by(|a, b| a.seq.cmp(&b.seq));
-                workflow_mut.tasks = LinkedList::from_iter(tasks.into_iter());
+                workflow.tasks = tasks.into_iter().collect::<LinkedList<_>>();
             }
-            Some(workflow_mut)
-        } else {
-            None
-        }
-    }
-
-    pub fn get_workflow_include_tasks_ref(
-        workflow_id: &InlineStr,
-        include_tasks: bool,
-    ) -> Option<(
-        Ref<'static, InlineStr, WorkflowModel>,
-        Vec<Ref<'static, InlineStr, TaskModel>>,
-    )> {
-        if let Some(workflow) = WORKFLOW.get(workflow_id) {
-            let tasks = if include_tasks {
-                let mut tasks = Self::get_tasks_for_workflow_ref(workflow_id);
-                tasks.sort_by(|a, b| a.seq.cmp(&b.seq));
-                tasks
-            } else {
-                Vec::default()
-            };
-
-            Some((workflow, tasks))
+            Some(workflow)
         } else {
             None
         }

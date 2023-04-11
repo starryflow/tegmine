@@ -4,7 +4,7 @@ use super::WorkflowModel;
 pub struct WorkflowSummary;
 
 impl WorkflowSummary {
-    pub fn new(_workflow: WorkflowModel) -> Self {
+    pub fn new(_workflow: &WorkflowModel) -> Self {
         Self {}
     }
 }
