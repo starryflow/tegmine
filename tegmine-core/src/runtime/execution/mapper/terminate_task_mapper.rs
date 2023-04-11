@@ -23,7 +23,7 @@ impl TaskMapper for TerminateTaskMapper {
         );
 
         let task_input = ParametersUtils::get_task_input(
-            &task_mapper_context.workflow_task.input_parameters,
+            &from_addr!(task_mapper_context.workflow_task).input_parameters,
             task_mapper_context.workflow_model,
             None,
             Some(&task_mapper_context.task_id),

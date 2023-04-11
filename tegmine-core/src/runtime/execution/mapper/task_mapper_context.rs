@@ -11,7 +11,7 @@ use crate::model::{TaskModel, TaskStatus, WorkflowModel};
 pub struct TaskMapperContext<'a> {
     pub workflow_model: &'a WorkflowModel,
     // task_definition: &'a TaskDef,
-    pub workflow_task: &'a WorkflowTask,
+    pub workflow_task: *mut WorkflowTask,
     pub task_input: HashMap<InlineStr, Object>,
     pub retry_count: i32,
     pub retry_task_id: InlineStr,
@@ -22,7 +22,7 @@ impl<'a> TaskMapperContext<'a> {
     pub fn new(
         workflow_model: &'a WorkflowModel,
         // task_definition: &'a TaskDef,
-        workflow_task: &'a WorkflowTask,
+        workflow_task: *mut WorkflowTask,
         task_input: HashMap<InlineStr, Object>,
         retry_count: i32,
         retry_task_id: InlineStr,
@@ -40,19 +40,21 @@ impl<'a> TaskMapperContext<'a> {
     }
 
     pub fn create_task_model(&self, status: TaskStatus) -> TaskModel {
+        let workflow_task = from_addr_mut!(self.workflow_task);
+
         let mut task_model = TaskModel::new(status);
-        task_model.reference_task_name = self.workflow_task.task_reference_name.clone();
+        task_model.reference_task_name = workflow_task.task_reference_name.clone();
         task_model.workflow_instance_id = self.workflow_model.workflow_id.clone();
         task_model.workflow_type = self.workflow_model.workflow_definition.name.clone();
         task_model.correlation_id = self.workflow_model.correlation_id.clone();
         task_model.scheduled_time = Utc::now().timestamp_millis();
 
         task_model.task_id = self.task_id.clone();
-        task_model.workflow_task = Some(self.workflow_task.clone());
+        task_model.workflow_task = Some(workflow_task.clone());
         task_model.workflow_priority = self.workflow_model.priority;
 
-        task_model.task_type = self.workflow_task.type_.clone();
-        task_model.task_def_name = self.workflow_task.name.clone();
+        task_model.task_type = workflow_task.type_.clone();
+        task_model.task_def_name = workflow_task.name.clone();
 
         task_model
     }

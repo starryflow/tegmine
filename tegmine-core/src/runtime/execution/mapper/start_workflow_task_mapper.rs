@@ -21,7 +21,7 @@ impl TaskMapper for StartWorkflowTaskMapper {
             .input_data
             .extend(task_mapper_context.task_input);
         start_workflow_task.callback_after_seconds =
-            task_mapper_context.workflow_task.start_delay as i64;
+            from_addr!(task_mapper_context.workflow_task).start_delay as i64;
         debug!("{:?} created", start_workflow_task);
         Ok(vec![start_workflow_task])
     }

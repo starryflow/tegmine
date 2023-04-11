@@ -34,10 +34,9 @@ impl WorkflowExecutor {
 
     fn end_execution(
         workflow: &mut WorkflowModel,
-        terminate_task: Option<*mut TaskModel>,
+        terminate_task: Option<&mut TaskModel>,
     ) -> TegResult<()> {
         if let Some(terminate_task) = terminate_task {
-            let terminate_task = unsafe { terminate_task.as_mut().expect("not nono") };
             let termination_status = if let Some(termination_status) = terminate_task
                 .workflow_task
                 .as_ref()
@@ -341,7 +340,10 @@ impl WorkflowExecutor {
         match DeciderService::decide(&mut workflow) {
             Ok(mut outcome) => {
                 if outcome.is_complete {
-                    Self::end_execution(&mut workflow, outcome.terminate_task)?;
+                    Self::end_execution(
+                        &mut workflow,
+                        outcome.terminate_task.map(|x| from_addr_mut!(x)),
+                    )?;
                     return Ok(());
                 }
 
@@ -355,7 +357,7 @@ impl WorkflowExecutor {
                     Self::schedule_task(&workflow, tasks_to_be_scheduled.as_slice())?; // start
 
                 for task in tasks_to_be_scheduled_in_outcome {
-                    let task = unsafe { task.as_mut().expect("not none") };
+                    let task = from_addr_mut!(task);
                     ExecutionDaoFacade::populate_task_data(task);
                     if SystemTaskRegistry::is_system_task(&task.task_type)
                         && !task.status.is_terminal()
@@ -420,15 +422,14 @@ impl WorkflowExecutor {
         let mut errored_tasks = Vec::default();
 
         // Update non-terminal tasks' status to CANCELED
-        let workflow_ptr = workflow as *mut WorkflowModel;
+        let workflow_ptr = addr_of_mut!(workflow);
         for task in workflow.tasks.iter_mut() {
             if !task.status.is_terminal() {
                 // Cancel the ones which are not completed yet....
                 task.status = TaskStatus::Canceled;
                 if SystemTaskRegistry::is_system_task(&task.task_type) {
                     let workflow_system_task = SystemTaskRegistry::get(&task.task_type)?;
-                    if let Err(e) = workflow_system_task
-                        .cancel(unsafe { workflow_ptr.as_mut().expect("not none") }, task)
+                    if let Err(e) = workflow_system_task.cancel(from_addr_mut!(workflow_ptr), task)
                     {
                         errored_tasks.push(task.reference_task_name.clone());
                         error!(
@@ -459,18 +460,18 @@ impl WorkflowExecutor {
         workflow: &mut WorkflowModel,
         tasks: Vec<TaskModel>,
     ) -> (Vec<*mut TaskModel>, Vec<*mut TaskModel>) {
-        let mut deduped_tasks = Vec::with_capacity(tasks.len());
-        let mut original_tasks = Vec::with_capacity(tasks.len());
+        let mut deduped_tasks: Vec<*mut TaskModel> = Vec::with_capacity(tasks.len());
+        let mut original_tasks: Vec<*mut TaskModel> = Vec::with_capacity(tasks.len());
         for task in tasks {
             if let Some(exist) = workflow
                 .tasks
                 .iter_mut()
                 .find(|x| x.get_task_key().eq(&task.get_task_key()))
             {
-                original_tasks.push(exist as *mut TaskModel);
+                original_tasks.push(exist);
             } else {
                 workflow.tasks.push_back(task);
-                let recent_push = workflow.tasks.back_mut().expect("not none") as *mut TaskModel;
+                let recent_push = workflow.tasks.back_mut().expect("not none");
                 deduped_tasks.push(recent_push);
                 original_tasks.push(recent_push);
             }
@@ -555,12 +556,7 @@ impl WorkflowExecutor {
             return Ok(false);
         }
 
-        let mut tasks = unsafe {
-            tasks
-                .iter()
-                .map(|x| x.as_mut().expect("not none"))
-                .collect::<Vec<_>>()
-        };
+        let mut tasks = tasks.iter().map(|&x| from_addr_mut!(x)).collect::<Vec<_>>();
 
         // Get the highest seq number
         let mut count = workflow.tasks.iter().map(|x| x.seq).max().unwrap_or(0);

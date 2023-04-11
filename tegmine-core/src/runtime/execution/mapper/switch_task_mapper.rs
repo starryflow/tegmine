@@ -27,7 +27,7 @@ impl TaskMapper for SwitchTaskMapper {
         );
         let mut tasks_to_be_scheduled = Vec::default();
 
-        let workflow_task = task_mapper_context.workflow_task;
+        let workflow_task = from_addr!(task_mapper_context.workflow_task);
         let task_input = std::mem::take(&mut task_mapper_context.task_input).into();
 
         // get the expression to be evaluated

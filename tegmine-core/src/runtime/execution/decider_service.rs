@@ -63,15 +63,15 @@ impl DeciderService {
             return Ok(out_come);
         }
 
-        let mut pending_tasks = Vec::default();
+        let mut pending_tasks: Vec<*mut TaskModel> = Vec::default();
         let mut executed_task_ref_names = HashSet::new();
         let mut has_successful_terminate_task = false;
-        for task in &workflow.tasks {
+        for task in &mut workflow.tasks {
             // Filter the list of tasks and include only tasks that are not retried, not executed
             // marked to be skipped and not part of System tasks that is DECISION, FORK, JOIN
             // This list will be empty for a new workflow being started
             if !task.retried && task.status != TaskStatus::Skipped && !task.executed {
-                pending_tasks.push(task as *const TaskModel as *mut TaskModel);
+                pending_tasks.push(task);
             }
 
             // Get all the tasks that have not completed their lifecycle yet
@@ -85,7 +85,7 @@ impl DeciderService {
                 && task.status.is_successful()
             {
                 has_successful_terminate_task = true;
-                out_come.terminate_task = Some(task as *const TaskModel as *mut TaskModel);
+                out_come.terminate_task = Some(task);
             }
         }
 
@@ -99,7 +99,7 @@ impl DeciderService {
 
         // A new workflow does not enter this code branch
         for pending_task_ptr in pending_tasks {
-            let pending_task = unsafe { pending_task_ptr.as_mut().expect("not none") };
+            let pending_task = from_addr_mut!(pending_task_ptr);
             if SystemTaskRegistry::is_system_task(&pending_task.task_type)
                 && !pending_task.status.is_terminal()
             {
@@ -110,8 +110,7 @@ impl DeciderService {
                 executed_task_ref_names.remove(&pending_task.reference_task_name);
             }
 
-            let pending_task_ptr = pending_task as *mut TaskModel;
-            let workflow_ptr = workflow as *mut WorkflowModel;
+            let workflow_ptr = addr_of_mut!(workflow);
             let mut task_definition = pending_task.get_task_definition();
             if task_definition.is_none() {
                 task_definition = workflow
@@ -121,18 +120,12 @@ impl DeciderService {
             }
 
             if let Some(task_definition) = task_definition {
-                Self::check_task_timeout(task_definition, unsafe {
-                    pending_task_ptr.as_mut().expect("not none")
-                })?;
-                Self::check_task_poll_timeout(task_definition, unsafe {
-                    pending_task_ptr.as_mut().expect("not none")
-                })?;
+                Self::check_task_timeout(task_definition, from_addr_mut!(pending_task_ptr))?;
+                Self::check_task_poll_timeout(task_definition, from_addr_mut!(pending_task_ptr))?;
                 // If the task has not been updated for "responseTimeoutSeconds" then mark task as
                 // TIMED_OUT
                 if Self::is_response_timeout(task_definition, &pending_task) {
-                    Self::timeout_task(task_definition, unsafe {
-                        pending_task_ptr.as_mut().expect("not none")
-                    });
+                    Self::timeout_task(task_definition, from_addr_mut!(pending_task_ptr));
                 }
             }
 
@@ -147,8 +140,8 @@ impl DeciderService {
                 let retry_task = Self::retry(
                     task_definition,
                     workflow_task,
-                    unsafe { pending_task_ptr.as_mut().expect("not none") },
-                    unsafe { workflow_ptr.as_mut().expect("not none") },
+                    from_addr_mut!(pending_task_ptr),
+                    from_addr_mut!(workflow_ptr),
                 )?;
                 if let Some(retry_task) = retry_task {
                     executed_task_ref_names.remove(&retry_task.reference_task_name);
@@ -785,7 +778,7 @@ impl DeciderService {
             // &task_to_schedule
             //     .task_definition
             //     .expect("task_definition not none"),
-            task_to_schedule,
+            addr_of_mut!(addr_of!(task_to_schedule)),
             input,
             retry_count,
             retried_task_id.into(),

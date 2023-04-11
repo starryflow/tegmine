@@ -27,25 +27,23 @@ impl TaskMapper for DynamicTaskMapper {
             task_mapper_context
         );
 
-        let workflow_task = unsafe {
-            (task_mapper_context.workflow_task as *const WorkflowTask as *mut WorkflowTask)
-                .as_mut()
-                .expect("not none")
-        };
+        let workflow_task = from_addr_mut!(
+            task_mapper_context.workflow_task as *const WorkflowTask as *mut WorkflowTask
+        );
 
         let task_name = Self::get_dynamic_task_name(
             &task_mapper_context.task_input,
-            &task_mapper_context.workflow_task.dynamic_task_name_param,
+            &workflow_task.dynamic_task_name_param,
         )?;
         workflow_task.name = task_name.clone();
 
-        match Self::get_dynamic_task_definition(task_mapper_context.workflow_task)? {
+        match Self::get_dynamic_task_definition(from_addr!(task_mapper_context.workflow_task))? {
             Either::Left(v) => workflow_task.task_definition = Some(v.clone()),
             Either::Right(v) => workflow_task.task_definition = Some(v.value().clone()),
         };
 
         let input = ParametersUtils::get_task_input(
-            &task_mapper_context.workflow_task.input_parameters,
+            &workflow_task.input_parameters,
             &task_mapper_context.workflow_model,
             workflow_task.task_definition.as_ref(),
             Some(&task_mapper_context.task_id),
@@ -56,10 +54,10 @@ impl TaskMapper for DynamicTaskMapper {
         // TaskModel
 
         let mut dynamic_task = task_mapper_context.create_task_model(TaskStatus::Scheduled);
-        dynamic_task.start_delay_in_seconds = task_mapper_context.workflow_task.start_delay;
+        dynamic_task.start_delay_in_seconds = workflow_task.start_delay;
         dynamic_task.input_data = input;
         dynamic_task.retry_count = task_mapper_context.retry_count;
-        dynamic_task.callback_after_seconds = task_mapper_context.workflow_task.start_delay as i64;
+        dynamic_task.callback_after_seconds = workflow_task.start_delay as i64;
         dynamic_task.response_timeout_seconds = workflow_task
             .task_definition
             .as_ref()

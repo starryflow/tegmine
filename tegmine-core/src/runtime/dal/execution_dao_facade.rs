@@ -195,11 +195,9 @@ impl ExecutionDaoFacade {
     }
 
     pub fn update_tasks(tasks: &[*mut TaskModel]) {
-        unsafe {
-            tasks
-                .iter()
-                .for_each(|x| Self::update_task(x.as_mut().expect("not none")));
-        }
+        tasks
+            .iter()
+            .for_each(|&x| Self::update_task(from_addr_mut!(x)));
     }
 
     /// Sets the update time for the task. Sets the end time for the task (if task is in terminal

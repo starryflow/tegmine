@@ -106,19 +106,15 @@ impl MetadataDao {
             }
             let guard = guard.expect("not none always");
 
-            let workflow_def = guard.get(&max_version);
-            if workflow_def.is_none() {
-                return None;
+            if let Some(workflow_def) = guard.get(&max_version) {
+                let workflow_def = from_addr!(addr_of!(workflow_def));
+                Some((guard, workflow_def))
+            } else {
+                None
             }
-            let workflow_def = unsafe {
-                (workflow_def.expect("not none always") as *const WorkflowDef)
-                    .as_ref()
-                    .expect("don't worry")
-            };
-
-            return Some((guard, workflow_def));
+        } else {
+            None
         }
-        None
     }
 
     fn get_workflow_max_version(workflow_name: &InlineStr) -> Option<i32> {
@@ -140,7 +136,7 @@ impl MetadataDao {
         let workflows = guard
             .value()
             .values()
-            .map(|x| unsafe { (x as *const WorkflowDef).as_ref().expect("don't worry") })
+            .map(|x| from_addr!(addr_of!(x)))
             .collect::<Vec<_>>();
         Some((guard, workflows))
     }
@@ -155,16 +151,12 @@ impl MetadataDao {
         }
         let guard = guard.expect("not none always");
 
-        let workflow_def = guard.get(&version);
-        if workflow_def.is_none() {
-            return None;
+        if let Some(workflow_def) = guard.get(&version) {
+            let workflow_def = from_addr!(addr_of!(workflow_def));
+            Some((guard, workflow_def))
+        } else {
+            None
         }
-        let workflow_def = unsafe {
-            (workflow_def.expect("not none always") as *const WorkflowDef)
-                .as_ref()
-                .expect("don't worry")
-        };
-        return Some((guard, workflow_def));
     }
 
     #[allow(unused)]
