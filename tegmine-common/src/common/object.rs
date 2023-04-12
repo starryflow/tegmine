@@ -135,7 +135,7 @@ impl Object {
         serde_json::Value::Array(json_list)
     }
 
-    fn to_json(&self) -> serde_json::Value {
+    pub fn to_json(&self) -> serde_json::Value {
         match self {
             Object::Int(v) => serde_json::Value::Number((*v).into()),
             Object::Long(v) => serde_json::Value::Number((*v).into()),

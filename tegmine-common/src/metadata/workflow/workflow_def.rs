@@ -93,6 +93,7 @@ impl WorkflowDef {
         for workflow_task in &self.tasks {
             tasks.extend(workflow_task.collect_tasks())
         }
+        debug!("collect {} tasks for {:?}", tasks.len(), self);
         tasks
     }
 

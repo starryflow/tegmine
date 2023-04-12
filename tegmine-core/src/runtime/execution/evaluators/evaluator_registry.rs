@@ -3,6 +3,7 @@ use dashmap::DashMap;
 use once_cell::sync::Lazy;
 use tegmine_common::prelude::*;
 
+// use super::rhai_evaluator::RhaiEvaluator;
 use super::value_param_evaluator::ValueParamEvaluator;
 use super::Evaluator;
 
@@ -14,6 +15,10 @@ static REGISTRY: Lazy<DashMap<InlineStr, Box<dyn Evaluator>>> = Lazy::new(|| {
         InlineStr::from("value-param"),
         Box::new(ValueParamEvaluator) as Box<dyn Evaluator>,
     );
+    // map.insert(
+    //     InlineStr::from("rhai"),
+    //     Box::new(RhaiEvaluator) as Box<dyn Evaluator>,
+    // );
     map
 });
 
