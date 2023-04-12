@@ -45,5 +45,6 @@ build_exceptions! {
     SendEventFailed(1005),
     TerminateWorkflow(ErrorCode::TERMINATE_WORKFLOW_CODE),
     NonTransient(1007),
+    ScriptEvalFailed(1008),
     UnknownException(1999),
 }

@@ -46,7 +46,7 @@ where
             process_fn: None,
         };
 
-        self_.execute_script(script);
+        let _ = self_.execute_script(script);
 
         let process_str = v8::String::new(&mut self_.context_scope, fn_name);
 
@@ -66,7 +66,7 @@ where
     }
 
     /// call with one argument
-    pub fn call_one_arg(&mut self, val: &Object) -> Option<Object> {
+    pub fn call_one_arg(&mut self, val: &Object) -> TegResult<Object> {
         let scope = &mut v8::HandleScope::new(&mut self.context_scope);
         let ref mut try_catch = v8::TryCatch::new(scope);
         let global = self.ctx.global(try_catch).into();
@@ -75,16 +75,22 @@ where
         let process_fn = self.process_fn.as_ref().unwrap();
 
         match process_fn.call(try_catch, global, &arg_vals) {
-            Some(v) => to_typed_value(v, try_catch),
+            Some(v) => to_typed_value(v, try_catch).ok_or(ErrorCode::ScriptEvalFailed(format!(
+                "convert to object from {:?} failed",
+                v
+            ))),
             None => {
-                try_catch_log(try_catch);
-                None
+                fmt_err!(
+                    ScriptEvalFailed,
+                    "eval javascript failed, error: {}",
+                    try_catch_log(try_catch)
+                )
             }
         }
     }
 
     /// call with two arguments
-    pub fn call_two_args(&mut self, vals: (&Object, &Object)) -> Option<Object> {
+    pub fn _call_two_args(&mut self, vals: (&Object, &Object)) -> TegResult<Object> {
         let scope = &mut v8::HandleScope::new(&mut self.context_scope);
         let ref mut try_catch = v8::TryCatch::new(scope);
         let global = self.ctx.global(try_catch).into();
@@ -92,20 +98,32 @@ where
         let arg_vals = &[wrap_value(vals.0, try_catch), wrap_value(vals.1, try_catch)];
 
         match process_fn.call(try_catch, global, arg_vals) {
-            Some(v) => to_typed_value(v, try_catch),
+            Some(v) => to_typed_value(v, try_catch).ok_or(ErrorCode::ScriptEvalFailed(format!(
+                "convert to object from {:?} failed",
+                v
+            ))),
             None => {
-                try_catch_log(try_catch);
-                None
+                fmt_err!(
+                    ScriptEvalFailed,
+                    "eval javascript failed, error: {}",
+                    try_catch_log(try_catch)
+                )
             }
         }
     }
 
-    fn execute_script(&mut self, script: Local<'s, v8::Script>) {
+    fn execute_script(&mut self, script: Local<'s, v8::Script>) -> TegResult<()> {
         let handle_scope = &mut v8::HandleScope::new(&mut self.context_scope);
         let try_catch = &mut v8::TryCatch::new(handle_scope);
 
         if script.run(try_catch).is_none() {
-            try_catch_log(try_catch);
+            fmt_err!(
+                ScriptEvalFailed,
+                "execute javascript failed, error: {}",
+                try_catch_log(try_catch)
+            )
+        } else {
+            Ok(())
         }
     }
 }
@@ -181,8 +199,7 @@ where
         Object::Null => {
             let v8_null = v8::null(scope);
             v8::Local::<v8::Value>::from(v8_null)
-        } /* BigInt
-           * Invalid */
+        } // TODO: Invalid
     }
 }
 
@@ -192,8 +209,7 @@ pub fn to_typed_value<'s>(
     handle_scope: &'s mut v8::HandleScope,
 ) -> Option<Object> {
     if local.is_undefined() {
-        unimplemented!();
-        // return Some(Object::Invalid);
+        return Some(Object::Null); // TODO: use invalid instead
     }
     if local.is_int32() {
         return local.int32_value(handle_scope).map(|val| Object::Int(val));
@@ -210,11 +226,12 @@ pub fn to_typed_value<'s>(
                 Object::Long(v)
             });
     }
-    // if local.is_number() {
-    //     return local
-    //         .number_value(handle_scope)
-    //         .map(|val| Object::Double(val));
-    // }
+    if local.is_number() {
+        // return local
+        //     .number_value(handle_scope)
+        //     .map(|val| Object::Double(val));
+        unimplemented!("not support number")
+    }
     if local.is_boolean() {
         return Some(Object::Boolean(local.is_true()));
     }
@@ -274,11 +291,12 @@ pub fn to_typed_value<'s>(
     unimplemented!()
 }
 
-fn try_catch_log(try_catch: &mut v8::TryCatch<v8::HandleScope>) {
+fn try_catch_log(try_catch: &mut v8::TryCatch<v8::HandleScope>) -> String {
     let exception = try_catch.exception().unwrap();
     let exception_string = exception
         .to_string(try_catch)
         .unwrap()
         .to_rust_string_lossy(try_catch);
-    error!("{}", exception_string);
+    // error!("{}", exception_string);
+    exception_string
 }
