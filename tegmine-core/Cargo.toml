@@ -41,6 +41,7 @@ base58 = { workspace = true }
 
 # Script Language
 rhai = { workspace = true }
+v8 = { workspace = true }
 
 # Text processing  
 bstr = { workspace = true }

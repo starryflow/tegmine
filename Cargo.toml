@@ -157,6 +157,7 @@ ctrlc = { version = "3.2.2", features = ["termination"] }
 semver = "1.0.10"
 
 # Script Language
+v8 = "0.68.0"
 rhai = "1.13.0"
 
 # Text processing 
