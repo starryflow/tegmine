@@ -11,6 +11,10 @@ mod utils;
 pub use model::WorkflowStatus;
 pub use service::{ExecutionService, MetadataService, TaskService, WorkflowService};
 
+pub fn initialize() {
+    utils::V8Engine::initialize_v8();
+}
+
 pub fn spawn_event_loop() {
     std::thread::spawn(|| loop {
         runtime::Channel::handle_evaluation_event()

@@ -11,7 +11,7 @@ pub enum Object {
     Long(i64),
     Boolean(bool),
     String(InlineStr),
-    Map(HashMap<InlineStr, Object>),
+    Map(HashMap<InlineStr, Object>), // TODO: use BTreeMap instead
     List(Vec<Object>),
     Null,
 }
