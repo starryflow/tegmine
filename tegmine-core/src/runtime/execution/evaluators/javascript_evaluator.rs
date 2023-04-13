@@ -13,7 +13,7 @@ impl Evaluator for JavascriptEvaluator {
         let ref mut isolate = v8::Isolate::new(Default::default());
         let ref mut isolated_scope = v8::HandleScope::new(isolate);
         let mut rt_engine = RuntimeEngine::new(
-            "function process($) { return $.inputValue == 'fedex' ? 'fedex' : 'ups' }",
+            &format!("function process($) {{ return {} }}", expression),
             "process",
             isolated_scope,
         );
@@ -32,9 +32,3 @@ impl Evaluator for JavascriptEvaluator {
         }
     }
 }
-
-// impl JavascriptEvaluator {
-//     fn new() -> RuntimeEngine<'static, 'static> {
-
-//     }
-// }

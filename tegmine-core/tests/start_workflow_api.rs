@@ -86,8 +86,17 @@ fn start_workflow() {
             .expect("get_execution_status failed");
 
     if workflow_status.is_terminal() && workflow_status.is_successful() {
+        let output = workflow.expect("not none").workflow.output;
+        assert_eq!(
+            output
+                .get("output")
+                .expect("no output")
+                .as_string()
+                .expect("no valid output"),
+            "Bar"
+        );
         eprintln!("workflow execute successful");
-        eprintln!("output: {:?}", workflow.expect("not none").workflow.output);
+        eprintln!("output: {:?}", output);
     } else {
         assert!(false, "workflow execute failed");
     }
@@ -179,8 +188,17 @@ fn start_workflow_javascript() {
             .expect("get_execution_status failed");
 
     if workflow_status.is_terminal() && workflow_status.is_successful() {
+        let output = workflow.expect("not none").workflow.output;
+        assert_eq!(
+            output
+                .get("output")
+                .expect("no output")
+                .as_string()
+                .expect("no valid output"),
+            "Bar"
+        );
         eprintln!("workflow execute successful");
-        eprintln!("output: {:?}", workflow.expect("not none").workflow.output);
+        eprintln!("output: {:?}", output);
     } else {
         assert!(false, "workflow execute failed");
     }
