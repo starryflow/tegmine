@@ -17,7 +17,6 @@ impl Evaluator for JavascriptEvaluator {
 
         let func_name = format!("evaluate_{:x}", md5::compute(expression));
         let source_code = format!(
-            // "globalThis.{}=function {}($) {{ return {} }}",
             "globalThis.{} = ($)=> {{ return {} }};",
             func_name, expression
         );
@@ -104,32 +103,23 @@ fn execute_global_func(
     func: v8::Global<v8::Function>,
     params: &Object,
 ) -> TegResult<Object> {
-    // call func
-    let result = {
-        let scope = &mut js_runtime.handle_scope();
-        let func: v8::Local<v8::Function> = v8::Local::new(scope, func);
-        let undefined = v8::undefined(scope);
-
-        let arg_vals = [DenoUtils::wrap_value(&params, scope)];
-        let ref mut try_catch = v8::TryCatch::new(scope);
-
-        match func.call(try_catch, undefined.into(), &arg_vals) {
-            Some(v) => v8::Global::new(try_catch, v),
-            None => {
-                return fmt_err!(
-                    ScriptEvalFailed,
-                    "eval javascript failed, error: {}",
-                    DenoUtils::try_catch_log(try_catch)
-                );
-            }
-        }
-    };
-
-    // result
     let scope = &mut js_runtime.handle_scope();
-    let local_value = v8::Local::new(scope, result);
-    DenoUtils::to_typed_value(local_value, scope).ok_or(ErrorCode::ScriptEvalFailed(format!(
-        "convert to object from {:?} failed",
-        local_value
-    )))
+    let func: v8::Local<v8::Function> = v8::Local::new(scope, func);
+    let undefined = v8::undefined(scope);
+
+    let arg_vals = [DenoUtils::wrap_value(&params, scope)];
+    let ref mut try_catch = v8::TryCatch::new(scope);
+
+    match func.call(try_catch, undefined.into(), &arg_vals) {
+        Some(v) => DenoUtils::to_typed_value(v, try_catch).ok_or(ErrorCode::ScriptEvalFailed(
+            format!("convert to object from {:?} failed", v),
+        )),
+        None => {
+            return fmt_err!(
+                ScriptEvalFailed,
+                "eval javascript failed, error: {}",
+                DenoUtils::try_catch_log(try_catch)
+            );
+        }
+    }
 }
