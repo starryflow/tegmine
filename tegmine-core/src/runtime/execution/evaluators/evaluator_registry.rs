@@ -4,6 +4,7 @@ use once_cell::sync::Lazy;
 use tegmine_common::prelude::*;
 
 use super::javascript_evaluator::JavascriptEvaluator;
+use super::javascript_evaluator_advance::JavascriptEvaluatorAdvance;
 // use super::rhai_evaluator::RhaiEvaluator;
 use super::value_param_evaluator::ValueParamEvaluator;
 use super::Evaluator;
@@ -19,6 +20,10 @@ static REGISTRY: Lazy<DashMap<InlineStr, Box<dyn Evaluator>>> = Lazy::new(|| {
     map.insert(
         InlineStr::from("javascript"),
         Box::new(JavascriptEvaluator) as Box<dyn Evaluator>,
+    );
+    map.insert(
+        InlineStr::from("javascript_advance"),
+        Box::new(JavascriptEvaluatorAdvance) as Box<dyn Evaluator>,
     );
     // map.insert(
     //     InlineStr::from("rhai"),
