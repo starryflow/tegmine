@@ -12,7 +12,7 @@ pub use model::WorkflowStatus;
 pub use service::{ExecutionService, MetadataService, TaskService, WorkflowService};
 
 pub fn initialize() {
-    utils::V8Utils::set_up_v8_globally();
+    // utils::V8Utils::set_up_v8_globally();
 }
 
 pub fn spawn_event_loop() {

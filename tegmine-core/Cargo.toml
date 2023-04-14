@@ -14,6 +14,9 @@ tegmine-common = { path = "../tegmine-common" }
 lazy_static = { workspace = true }
 once_cell = { workspace = true }
 
+# Algorithms  
+md5 = { workspace = true }
+
 # Asynchronous 
 crossbeam-channel = { workspace = true }
 
@@ -27,7 +30,6 @@ either = { workspace = true }
 chrono = { workspace = true }
 chrono-tz = { workspace = true }
 
-
 # Development tools 
 env_logger = { workspace = true }
 serde = { workspace = true }
@@ -40,8 +42,9 @@ thread_local = { workspace = true }
 base58 = { workspace = true }
 
 # Script Language
+deno_core = { workspace = true }
 rhai = { workspace = true }
-v8 = { workspace = true }
+# v8 = { workspace = true }
 
 # Text processing  
 bstr = { workspace = true }

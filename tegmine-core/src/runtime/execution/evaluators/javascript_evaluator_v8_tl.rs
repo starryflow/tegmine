@@ -3,9 +3,9 @@ use tegmine_common::prelude::*;
 use super::Evaluator;
 use crate::utils::V8Utils;
 
-pub struct JavascriptEvaluatorAdvance;
+pub struct JavascriptEvaluatorV8Tl;
 
-impl Evaluator for JavascriptEvaluatorAdvance {
+impl Evaluator for JavascriptEvaluatorV8Tl {
     fn evaluate(&self, expression: &InlineStr, input: &Object) -> TegResult<Object> {
         debug!("Javascript evaluator -- expression: {}", expression);
         // Evaluate the expression by using the Javascript evaluation engine.
