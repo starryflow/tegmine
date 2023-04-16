@@ -1,0 +1,20 @@
+[package]
+name = "tegmine-server"
+description = "server module"
+version = { workspace = true }
+authors = { workspace = true }
+license = { workspace = true }
+publish = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+tegmine-common = { path = "../tegmine-common" }
+tegmine-core = { path = "../tegmine-core" }
+
+
+# Asynchronous  
+tokio = { workspace = true }
+
+# Web
+axum = { workspace = true }
+axum-macros = { workspace = true }
