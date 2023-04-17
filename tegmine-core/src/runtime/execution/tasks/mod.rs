@@ -1,5 +1,9 @@
+mod do_while;
+mod fork;
+mod join;
 mod set_variable;
 mod start_workflow;
+mod sub_workflow;
 mod switch;
 mod system_task_registry;
 mod terminate;

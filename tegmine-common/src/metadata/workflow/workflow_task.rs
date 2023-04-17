@@ -278,7 +278,7 @@ impl TryFrom<&serde_json::Value> for WorkflowTask {
         let fork_tasks = Self::fork_join_try_from(&type_, value)?;
 
         // JOIN
-        let join_on = Self::join_try_from(&type_, value)?;
+        let join_on = Self::join_try_from(&type_, value, &fork_tasks)?;
 
         // TODO
         {
@@ -541,25 +541,47 @@ impl WorkflowTask {
                 fork_tasks.push(tasks);
             }
 
+            if fork_tasks.is_empty() {
+                return fmt_err!(IllegalArgument, "WorkflowTask: forkTasks can not be empty");
+            }
             Ok(fork_tasks)
         } else {
             Ok(Vec::default())
         }
     }
 
-    fn join_try_from(type_: &InlineStr, value: &serde_json::Value) -> TegResult<Vec<InlineStr>> {
+    fn join_try_from(
+        type_: &InlineStr,
+        value: &serde_json::Value,
+        fork_tasks: &Vec<Vec<WorkflowTask>>,
+    ) -> TegResult<Vec<InlineStr>> {
         if type_.eq("JOIN") {
             let mut join_on = Vec::default();
+
             for v in value
                 .get("joinOn")
                 .and_then(|x| x.as_array())
                 .ok_or(ErrorCode::IllegalArgument("WorkflowTask: join invalid"))?
             {
-                join_on.push(
-                    v.as_str()
-                        .ok_or(ErrorCode::IllegalArgument("WorkflowTask: joinOn invalid"))?
-                        .into(),
-                );
+                let fork_task_ref = v
+                    .as_str()
+                    .ok_or(ErrorCode::IllegalArgument("WorkflowTask: joinOn invalid"))?
+                    .into();
+                let mut exist_ref = false;
+                for tasks in fork_tasks {
+                    if tasks
+                        .iter()
+                        .find(|x| x.task_reference_name.eq(&fork_task_ref))
+                        .is_some()
+                    {
+                        exist_ref = true;
+                        break;
+                    }
+                }
+                if !exist_ref {
+                    return fmt_err!(IllegalArgument, "WorkflowTask: joinOn task_ref not exist");
+                }
+                join_on.push(fork_task_ref);
             }
             if join_on.is_empty() {
                 return fmt_err!(IllegalArgument, "WorkflowTask: joinOn can not be empty");
