@@ -406,8 +406,7 @@ impl DeciderService {
 
         // Get the following task after the last completed task
         if SystemTaskRegistry::is_system_task(&task.task_type)
-            && (TaskType::Decision.as_ref().eq(&task.task_type)
-                || TaskType::Switch.as_ref().eq(&task.task_type))
+            && (TaskType::Switch.as_ref().eq(&task.task_type))
         {
             if task
                 .input_data

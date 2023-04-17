@@ -1,5 +1,3 @@
-use dashmap::mapref::one::Ref;
-use either::Either;
 use tegmine_common::prelude::*;
 use tegmine_common::{TaskDef, TaskType, WorkflowTask};
 
@@ -37,10 +35,9 @@ impl TaskMapper for DynamicTaskMapper {
         )?;
         workflow_task.name = task_name.clone();
 
-        match Self::get_dynamic_task_definition(from_addr!(task_mapper_context.workflow_task))? {
-            Either::Left(v) => workflow_task.task_definition = Some(v.clone()),
-            Either::Right(v) => workflow_task.task_definition = Some(v.value().clone()),
-        };
+        workflow_task.task_definition = Some(Self::get_dynamic_task_definition(from_addr!(
+            task_mapper_context.workflow_task
+        ))?);
 
         let input = ParametersUtils::get_task_input(
             &workflow_task.input_parameters,
@@ -82,15 +79,13 @@ impl DynamicTaskMapper {
 
     /// This method gets the TaskDefinition for a specific `WorkflowTask`
     /// return An instance of TaskDefinition
-    fn get_dynamic_task_definition<'a>(
-        workflow_task: &'a WorkflowTask,
-    ) -> TegResult<Either<&'a TaskDef, Ref<InlineStr, TaskDef>>> {
+    fn get_dynamic_task_definition<'a>(workflow_task: &'a WorkflowTask) -> TegResult<TaskDef> {
         // be moved to DAO
         if let Some(task_def) = workflow_task.task_definition.as_ref() {
-            Ok(Either::Left(task_def))
+            Ok(task_def.clone())
         } else {
             if let Some(task_def) = MetadataDao::get_task_def(&workflow_task.name) {
-                Ok(Either::Right(task_def))
+                Ok(task_def.clone())
             } else {
                 fmt_err!(
                     TerminateWorkflow,

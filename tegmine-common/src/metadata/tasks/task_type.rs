@@ -7,38 +7,44 @@ use strum_macros::{AsRefStr, EnumString};
 #[derive(EnumString, AsRefStr, PartialEq, Eq)]
 #[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum TaskType {
-    Simple,
+    SetVariable,
+    Switch,
     Dynamic,
     ForkJoin,
-    ForkJoinDynamic,
-    Decision,
-    Switch,
     Join,
+    ForkJoinDynamic,
+    UserDefined,
     DoWhile,
-    SubWorkflow,
+    Simple,
     StartWorkflow,
+    SubWorkflow,
+    Terminate,
+
     Event,
     Wait,
     Human,
-    UserDefined,
     Http,
-    Lambda,
     Inline,
-    ExclusiveJoin,
-    Terminate,
     KafkaPublish,
     JsonJqTransform,
-    SetVariable,
+
+    ExclusiveJoin,
+    // #[deprecated]
+    // Switch Instead
+    // Decision,
+    // #[deprecated]
+    // Inline Instead
+    // Lambda,
 }
 
 static BUILT_IN_TASKS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     HashSet::from_iter([
-        TaskType::Decision.as_ref(),
         TaskType::Switch.as_ref(),
-        // TaskType::Fork.as_ref(),
-        TaskType::Join.as_ref(),
+        TaskType::Join.as_ref(), // TODO: No ForkJoin ?
         TaskType::ExclusiveJoin.as_ref(),
         TaskType::DoWhile.as_ref(),
+        // TaskType::Decision.as_ref(),
+        // TaskType::Fork.as_ref(),
     ])
 });
 

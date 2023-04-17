@@ -89,7 +89,7 @@ impl WorkflowTask {
     fn children(&self) -> Vec<&Vec<WorkflowTask>> {
         let mut workflow_task_lists = Vec::default();
         match TaskType::of(self.type_.as_str()) {
-            TaskType::Decision | TaskType::Switch => {
+            TaskType::Switch => {
                 workflow_task_lists.extend(self.decision_cases.values());
                 workflow_task_lists.push(&self.default_case);
             }
@@ -103,7 +103,7 @@ impl WorkflowTask {
     fn children_mut(&mut self) -> Vec<&mut Vec<WorkflowTask>> {
         let mut workflow_task_lists = Vec::default();
         match TaskType::of(self.type_.as_str()) {
-            TaskType::Decision | TaskType::Switch => {
+            TaskType::Switch => {
                 for (_, tasks) in self.decision_cases.iter_mut() {
                     workflow_task_lists.push(tasks);
                 }
@@ -145,7 +145,7 @@ impl WorkflowTask {
     ) -> Option<&WorkflowTask> {
         let task_type = TaskType::of(self.type_.as_str());
         match task_type {
-            TaskType::DoWhile | TaskType::Decision | TaskType::Switch => {
+            TaskType::DoWhile | TaskType::Switch => {
                 for workflow_tasks in self.children() {
                     let mut iterator = workflow_tasks.iter();
                     while let Some(task) = iterator.next() {
@@ -211,7 +211,7 @@ impl WorkflowTask {
         }
 
         match TaskType::of(self.type_.as_str()) {
-            TaskType::Decision | TaskType::Switch | TaskType::DoWhile | TaskType::ForkJoin => {
+            TaskType::Switch | TaskType::DoWhile | TaskType::ForkJoin => {
                 for child_x in self.children() {
                     for child in child_x {
                         if child.has(task_reference_name) {

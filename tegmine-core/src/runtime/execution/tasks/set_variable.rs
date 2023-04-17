@@ -9,6 +9,7 @@ use crate::model::{TaskModel, TaskStatus, WorkflowModel};
 use crate::runtime::ExecutionDaoFacade;
 
 pub struct SetVariable;
+
 impl SetVariable {
     fn validate_variables_size(workflow: &WorkflowModel) -> Option<String> {
         let max_threshold = Properties::get_max_workflow_variables_payload_size_threshold();
