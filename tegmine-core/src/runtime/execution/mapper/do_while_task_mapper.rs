@@ -19,7 +19,7 @@ impl TaskMapper for DoWhileTaskMapper {
     /// This method maps `TaskMapper` to map a `WorkflowTask` of type `TaskType::DO_WHILE` to a
     /// `TaskModel` of type `TaskType::DO_WHILE` with a status of `TaskStatus::IN_PROGRESS`
     ///
-    /// return: A `TaskModel` of type `TaskType::DO_WHILE` in a List
+    /// return A `TaskModel` of type `TaskType::DO_WHILE` in a List
     fn get_mapped_tasks(
         &self,
         task_mapper_context: TaskMapperContext,

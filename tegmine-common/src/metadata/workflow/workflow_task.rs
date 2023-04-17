@@ -60,8 +60,8 @@ pub struct WorkflowTask {
     // pub sub_workflow_param: Option<SubWorkflowParams>,
 
     // /// FORK_JOIN/JOIN/EXCLUSIVE_JOIN
-    // pub fork_tasks: Vec<Vec<WorkflowTask>>,
-    // pub join_on: Vec<InlineStr>,
+    pub fork_tasks: Vec<Vec<WorkflowTask>>,
+    pub join_on: Vec<InlineStr>,
     // pub default_exclusive_join_task: Vec<InlineStr>,
 
     // /// FORK_JOIN_DYNAMIC
@@ -271,15 +271,20 @@ impl TryFrom<&serde_json::Value> for WorkflowTask {
             }
         }
 
+        // DO_WHILE
         let (loop_condition, loop_over) = Self::loop_try_from(&type_, value)?;
+
+        // FORK_JOIN
+        let fork_tasks = Self::fork_join_try_from(&type_, value)?;
+
+        // JOIN
+        let join_on = Self::join_try_from(&type_, value)?;
 
         // TODO
         {
             // START_WORKFLOW -> inputParameters<startWorkflow>
             // SUB_WORKFLOW -> subWorkflowParam
 
-            // FORK_JOIN -> forkTasks
-            // JOIN -> joinOn
             // FORK_JOIN_DYNAMIC -> dynamicForkTasksParam, dynamicForkTasksInputParamName,
             // inputParameters<dynamicTasks, dynamicTasksInput>
             //
@@ -348,8 +353,8 @@ impl TryFrom<&serde_json::Value> for WorkflowTask {
             loop_condition,
             loop_over,
             // sub_workflow_param: (),
-            // fork_tasks: (),
-            // join_on: (),
+            fork_tasks,
+            join_on,
             // default_exclusive_join_task: (),
             // dynamic_fork_tasks_param: (),
             // dynamic_fork_tasks_input_param_name: (),
@@ -512,6 +517,56 @@ impl WorkflowTask {
             Ok((loop_condition, loop_over))
         } else {
             Ok((InlineStr::default(), Vec::default()))
+        }
+    }
+
+    fn fork_join_try_from(
+        type_: &InlineStr,
+        value: &serde_json::Value,
+    ) -> TegResult<Vec<Vec<WorkflowTask>>> {
+        if type_.eq("FORK_JOIN") {
+            let mut fork_tasks = Vec::default();
+            for array in value.get("forkTasks").and_then(|x| x.as_array()).ok_or(
+                ErrorCode::IllegalArgument("WorkflowTask: fork_join invalid"),
+            )? {
+                let tasks = WorkflowTask::try_from_jsonlist(array.as_array().ok_or(
+                    ErrorCode::IllegalArgument("WorkflowTask: fork_join invalid"),
+                )?)?;
+                if tasks.is_empty() {
+                    return fmt_err!(
+                        IllegalArgument,
+                        "WorkflowTask: tasks in forkTasks can not be empty"
+                    );
+                }
+                fork_tasks.push(tasks);
+            }
+
+            Ok(fork_tasks)
+        } else {
+            Ok(Vec::default())
+        }
+    }
+
+    fn join_try_from(type_: &InlineStr, value: &serde_json::Value) -> TegResult<Vec<InlineStr>> {
+        if type_.eq("JOIN") {
+            let mut join_on = Vec::default();
+            for v in value
+                .get("joinOn")
+                .and_then(|x| x.as_array())
+                .ok_or(ErrorCode::IllegalArgument("WorkflowTask: join invalid"))?
+            {
+                join_on.push(
+                    v.as_str()
+                        .ok_or(ErrorCode::IllegalArgument("WorkflowTask: joinOn invalid"))?
+                        .into(),
+                );
+            }
+            if join_on.is_empty() {
+                return fmt_err!(IllegalArgument, "WorkflowTask: joinOn can not be empty");
+            }
+            Ok(join_on)
+        } else {
+            Ok(Vec::default())
         }
     }
 }

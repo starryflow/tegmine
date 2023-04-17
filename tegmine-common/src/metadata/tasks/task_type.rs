@@ -38,7 +38,7 @@ pub enum TaskType {
 static BUILT_IN_TASKS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     HashSet::from_iter([
         TaskType::Switch.as_ref(),
-        "FORK", // see: ForkJoinDynamicTaskMapper
+        TaskType::TASK_TYPE_FORK, // see: ForkJoinDynamicTaskMapper
         TaskType::Join.as_ref(),
         TaskType::ExclusiveJoin.as_ref(),
         TaskType::DoWhile.as_ref(),
@@ -46,6 +46,8 @@ static BUILT_IN_TASKS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
 });
 
 impl TaskType {
+    pub const TASK_TYPE_FORK: &'static str = "FORK";
+
     /// Converts a task type string to `TaskType`. For an unknown string, the value is defaulted to
     /// `TaskType::USER_DEFINED`.
     pub fn of(task_type: &str) -> TaskType {
