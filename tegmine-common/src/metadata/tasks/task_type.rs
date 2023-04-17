@@ -21,30 +21,27 @@ pub enum TaskType {
     Terminate,
 
     Event,
-    Wait,
     Human,
     Http,
     Inline,
-    KafkaPublish,
     JsonJqTransform,
+    KafkaPublish,
+    Wait,
 
     ExclusiveJoin,
-    // #[deprecated]
-    // Switch Instead
+    // deprecated: Switch Instead
     // Decision,
-    // #[deprecated]
-    // Inline Instead
+    // deprecated: Inline Instead
     // Lambda,
 }
 
 static BUILT_IN_TASKS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     HashSet::from_iter([
         TaskType::Switch.as_ref(),
-        TaskType::Join.as_ref(), // TODO: No ForkJoin ?
+        "FORK", // see: ForkJoinDynamicTaskMapper
+        TaskType::Join.as_ref(),
         TaskType::ExclusiveJoin.as_ref(),
         TaskType::DoWhile.as_ref(),
-        // TaskType::Decision.as_ref(),
-        // TaskType::Fork.as_ref(),
     ])
 });
 

@@ -16,6 +16,9 @@ impl TaskMapper for DynamicTaskMapper {
         TaskType::Dynamic.as_ref()
     }
 
+    /// This method maps a dynamic task to a `TaskModel` based on the input params
+    ///
+    /// return: A `List` that contains a single `TaskModel` with a `TaskStatus::Scheduled`
     fn get_mapped_tasks(
         &self,
         task_mapper_context: TaskMapperContext,
