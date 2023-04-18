@@ -7,7 +7,7 @@ use crate::model::{TaskModel, TaskStatus};
 use crate::runtime::execution::mapper::TaskMapperContext;
 use crate::runtime::execution::DeciderService;
 
-/// An implementation of `TaskMapper` to map a `WorkflowTask` of type `TaskType::FORK_JOIN` to a
+/// An implementation of `TaskMapper` to map a `WorkflowTask` of type `TaskType::ForkJoin` to a
 /// LinkedList of `TaskModel` beginning with a completed `TaskType::TASK_TYPE_FORK`, followed by the
 /// user defined fork tasks
 pub struct ForkJoinTaskMapper;
@@ -18,12 +18,12 @@ impl TaskMapper for ForkJoinTaskMapper {
     }
 
     /// This method gets the list of tasks that need to scheduled when the task to scheduled is of
-    /// type `TaskType::FORK_JOIN`.
+    /// type `TaskType::ForkJoin`.
     ///
     /// return List of tasks in the following order:
-    /// `TaskType#TASK_TYPE_FORK` with `TaskStatus::COMPLETED`
+    /// `TaskType::TASK_TYPE_FORK` with `TaskStatus::Completed`
     /// Might be any kind of task, but in most cases is a UserDefinedTask with
-    /// `TaskStatus::SCHEDULED`
+    /// `TaskStatus::Scheduled`
     fn get_mapped_tasks(
         &self,
         task_mapper_context: TaskMapperContext,

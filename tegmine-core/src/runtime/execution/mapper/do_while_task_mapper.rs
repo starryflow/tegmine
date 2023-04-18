@@ -7,8 +7,8 @@ use crate::dao::MetadataDao;
 use crate::model::{TaskModel, TaskStatus};
 use crate::utils::ParametersUtils;
 
-/// An implementation of `TaskMapper` to map a `WorkflowTask` of type `TaskType::DO_WHILE` to a
-/// `TaskModel` of type `TaskType::DO_WHILE`
+/// An implementation of `TaskMapper` to map a `WorkflowTask` of type `TaskType::DoWhile` to a
+/// `TaskModel` of type `TaskType::DoWhile`
 pub struct DoWhileTaskMapper;
 
 impl TaskMapper for DoWhileTaskMapper {
@@ -16,10 +16,10 @@ impl TaskMapper for DoWhileTaskMapper {
         TaskType::DoWhile.as_ref()
     }
 
-    /// This method maps `TaskMapper` to map a `WorkflowTask` of type `TaskType::DO_WHILE` to a
-    /// `TaskModel` of type `TaskType::DO_WHILE` with a status of `TaskStatus::IN_PROGRESS`
+    /// This method maps `TaskMapper` to map a `WorkflowTask` of type `TaskType::DoWhile` to a
+    /// `TaskModel` of type `TaskType::DoWhile` with a status of `TaskStatus::InProgress`
     ///
-    /// return A `TaskModel` of type `TaskType::DO_WHILE` in a List
+    /// return A `TaskModel` of type `TaskType::DoWhile` in a List
     fn get_mapped_tasks(
         &self,
         task_mapper_context: TaskMapperContext,

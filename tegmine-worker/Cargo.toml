@@ -1,0 +1,11 @@
+[package]
+name = "tegmine-worker"
+description = "worker module"
+version = { workspace = true }
+authors = { workspace = true }
+license = { workspace = true }
+publish = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+tegmine-common = { path = "../tegmine-common" }

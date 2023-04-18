@@ -165,7 +165,7 @@ impl WorkflowExecutor {
     pub fn terminate_workflow(workflow: &mut WorkflowModel, reason: InlineStr) -> TegResult<()> {
         let mut workflow = ExecutionDaoFacade::get_workflow_model(&workflow.workflow_id, true)?;
         if workflow.status == WorkflowStatus::Completed {
-            str_err!(Conflict, "Cannot terminate a COMPLETED workflow.")
+            str_err!(Conflict, "Cannot terminate a Completed workflow.")
         } else {
             workflow.status = WorkflowStatus::Terminated;
             Self::terminate_workflow_with_failure_workflow(&mut workflow, reason, InlineStr::new())

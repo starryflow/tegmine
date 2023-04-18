@@ -6,8 +6,8 @@ use super::TaskMapper;
 use crate::model::{TaskModel, TaskStatus};
 use crate::runtime::execution::mapper::TaskMapperContext;
 
-/// An implementation of `TaskMapper` to map a `WorkflowTask` of type `TaskType::JOIN` to a
-/// `TaskModel` of type `TaskType::JOIN`
+/// An implementation of `TaskMapper` to map a `WorkflowTask` of type `TaskType::Join` to a
+/// `TaskModel` of type `TaskType::Join`
 pub struct JoinTaskMapper;
 
 impl TaskMapper for JoinTaskMapper {
@@ -15,10 +15,10 @@ impl TaskMapper for JoinTaskMapper {
         TaskType::ForkJoin.as_ref()
     }
 
-    /// This method maps `TaskMapper` to map a `WorkflowTask` of type `TaskType::JOIN` to a
-    /// `TaskModel` of type `TaskType::JOIN` with a status of `TaskStatus::IN_PROGRESS`
+    /// This method maps `TaskMapper` to map a `WorkflowTask` of type `TaskType::Join` to a
+    /// `TaskModel` of type `TaskType::Join` with a status of `TaskStatus::InProgress`
     ///
-    /// return A `TaskModel` of type `TaskType::JOIN` in a List
+    /// return A `TaskModel` of type `TaskType::Join` in a List
     fn get_mapped_tasks(
         &self,
         task_mapper_context: TaskMapperContext,

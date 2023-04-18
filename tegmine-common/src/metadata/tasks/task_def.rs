@@ -22,7 +22,7 @@ pub struct TaskDef {
     /// Defaults to TIME_OUT_WF
     pub timeout_policy: TimeoutPolicy,
     /// Time in seconds, after which the task is marked as TIMED_OUT if not completed after
-    /// transitioning to IN_PROGRESS status for the first time
+    /// transitioning to InProgress status for the first time
     /// No timeouts if set to 0
     pub timeout_seconds: i32,
     /// If greater than 0, the task is rescheduled if not updated with a status after this time

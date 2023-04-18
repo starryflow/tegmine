@@ -7,8 +7,8 @@ use crate::model::{TaskModel, TaskStatus};
 use crate::runtime::execution::evaluators::EvaluatorRegistry;
 use crate::runtime::execution::DeciderService;
 
-/// An implementation of `TaskMapper` to map a `WorkflowTask` of type `TaskType::SWITCH` to a List
-/// `TaskModel` starting with Task of type `TaskType#SWITCH` which is marked as IN_PROGRESS,
+/// An implementation of `TaskMapper` to map a `WorkflowTask` of type `TaskType::Switch` to a List
+/// `TaskModel` starting with Task of type `TaskType::Switch` which is marked as InProgress,
 /// followed by the list of `TaskModel` based on the case expression evaluation in the Switch task.
 pub struct SwitchTaskMapper;
 
@@ -17,6 +17,16 @@ impl TaskMapper for SwitchTaskMapper {
         TaskType::Switch.as_ref()
     }
 
+    /// This method gets the list of tasks that need to scheduled when the task to scheduled is of
+    /// type `TaskType::Switch`}.
+    ///
+    /// return List of tasks in the following order:
+    /// - `TaskType::Switch` with `TaskStatus::InProgress`
+    /// - `List of tasks based on the evaluation of `WorkflowTask::getEvaluatorType()` and
+    /// `WorkflowTask::getExpression()` are scheduled.     
+    /// - `In the case of no matching `WorkflowTask::getEvaluatorType()`, workflow will be
+    ///   terminated with error message. In case of no matching result after the evaluation of the
+    ///   `WorkflowTask::getExpression()`, the `WorkflowTask::getDefaultCase()` Tasks are scheduled.
     fn get_mapped_tasks(
         &self,
         mut task_mapper_context: TaskMapperContext,

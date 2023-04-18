@@ -5,7 +5,7 @@ use crate::model::{TaskModel, WorkflowModel};
 pub trait WorkflowSystemTask: Send + Sync {
     /// Start the task execution.
     ///
-    /// Called only once, and first, when the task status is SCHEDULED.
+    /// Called only once, and first, when the task status is Scheduled.
     fn start(&self, _workflow: &WorkflowModel, _task: &TaskModel) -> TegResult<()> {
         // Do nothing unless overridden by the task implementation
         Ok(())
@@ -28,7 +28,7 @@ pub trait WorkflowSystemTask: Send + Sync {
         false
     }
 
-    /// return True to keep task in 'IN_PROGRESS' state, and 'COMPLETE' later by an external
+    /// return True to keep task in 'InProgress' state, and 'COMPLETE' later by an external
     /// message.
     fn is_async_complete(&self, task: &TaskModel) -> bool {
         if let Some(async_complete) = task.input_data.get(&InlineStr::from("asyncComplete")) {

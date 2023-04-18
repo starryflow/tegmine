@@ -25,7 +25,7 @@ pub struct WorkflowTask {
     /// JSONPath expression that defines the input given to the task. Only one of inputParameters
     /// or inputExpression can be used in a task.
     // pub input_expression
-    /// false to mark status COMPLETED upon execution; true to keep the task IN_PROGRESS and wait
+    /// false to mark status Completed upon execution; true to keep the task InProgress and wait
     /// for an external event to complete it.
     pub async_complete: bool,
     /// Time in seconds to wait before making the task available to be polled by a worker.
@@ -44,6 +44,10 @@ pub struct WorkflowTask {
     /// List of tasks to be executed when no matching value if found in decisionCases
     pub default_case: Vec<WorkflowTask>,
 
+    /// EXCLUSIVE_JOIN
+    pub exclusive_join_on: Vec<InlineStr>,
+    pub default_exclusive_join_task: Vec<InlineStr>,
+
     /// DYNAMIC
     /// Name of the parameter from inputParameters whose value is used to schedule the task. e.g.
     /// "taskToExecute"
@@ -59,10 +63,9 @@ pub struct WorkflowTask {
     // /// SUB_WORKFLOW
     // pub sub_workflow_param: Option<SubWorkflowParams>,
 
-    // /// FORK_JOIN/JOIN/EXCLUSIVE_JOIN
+    // /// FORK_JOIN/JOIN
     pub fork_tasks: Vec<Vec<WorkflowTask>>,
     pub join_on: Vec<InlineStr>,
-    // pub default_exclusive_join_task: Vec<InlineStr>,
 
     // /// FORK_JOIN_DYNAMIC
     // pub dynamic_fork_tasks_param: InlineStr,
@@ -280,6 +283,10 @@ impl TryFrom<&serde_json::Value> for WorkflowTask {
         // JOIN
         let join_on = Self::join_try_from(&type_, value, &fork_tasks)?;
 
+        // EXCLUSIVE_JOIN
+        let (exclusive_join_on, default_exclusive_join_task) =
+            Self::exclusive_join_try_from(&type_, value)?;
+
         // TODO
         {
             // START_WORKFLOW -> inputParameters<startWorkflow>
@@ -348,6 +355,8 @@ impl TryFrom<&serde_json::Value> for WorkflowTask {
             evaluator_type,
             expression,
             decision_cases,
+            exclusive_join_on,
+            default_exclusive_join_task,
             default_case,
             dynamic_task_name_param,
             loop_condition,
@@ -355,7 +364,6 @@ impl TryFrom<&serde_json::Value> for WorkflowTask {
             // sub_workflow_param: (),
             fork_tasks,
             join_on,
-            // default_exclusive_join_task: (),
             // dynamic_fork_tasks_param: (),
             // dynamic_fork_tasks_input_param_name: (),
             // sink: (),
@@ -589,6 +597,64 @@ impl WorkflowTask {
             Ok(join_on)
         } else {
             Ok(Vec::default())
+        }
+    }
+
+    fn exclusive_join_try_from(
+        type_: &InlineStr,
+        value: &serde_json::Value,
+    ) -> TegResult<(Vec<InlineStr>, Vec<InlineStr>)> {
+        if type_.eq("EXCLUSIVE_JOIN") {
+            let mut exclusive_join_on = Vec::default();
+
+            for v in value
+                .get("exclusiveJoinOn")
+                .and_then(|x| x.as_array())
+                .ok_or(ErrorCode::IllegalArgument(
+                    "WorkflowTask: exclusive_join invalid",
+                ))?
+            {
+                let fork_task_ref = v
+                    .as_str()
+                    .ok_or(ErrorCode::IllegalArgument(
+                        "WorkflowTask: exclusive_join invalid",
+                    ))?
+                    .into();
+                exclusive_join_on.push(fork_task_ref);
+            }
+            if exclusive_join_on.is_empty() {
+                return fmt_err!(
+                    IllegalArgument,
+                    "WorkflowTask: joinOn in exclusive_join can not be empty"
+                );
+            }
+
+            let mut default_exclusive_join_task = Vec::default();
+            for v in value
+                .get("defaultExclusiveJoinTask")
+                .and_then(|x| x.as_array())
+                .ok_or(ErrorCode::IllegalArgument(
+                    "WorkflowTask: exclusive_join invalid",
+                ))?
+            {
+                let default_exclusive_join_task_ref = v
+                    .as_str()
+                    .ok_or(ErrorCode::IllegalArgument(
+                        "WorkflowTask: exclusive_join invalid",
+                    ))?
+                    .into();
+                default_exclusive_join_task.push(default_exclusive_join_task_ref);
+            }
+            if default_exclusive_join_task.is_empty() {
+                return fmt_err!(
+                    IllegalArgument,
+                    "WorkflowTask: defaultExclusiveJoinTask in exclusive_join can not be empty"
+                );
+            }
+
+            Ok((exclusive_join_on, default_exclusive_join_task))
+        } else {
+            Ok((Vec::default(), Vec::default()))
         }
     }
 }

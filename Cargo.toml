@@ -7,7 +7,7 @@ publish = false
 edition = "2021"
 
 [workspace]
-members = ["tegmine-common/", "tegmine-core/", "tegmine-server"]
+members = ["tegmine-common", "tegmine-core", "tegmine-server", "tegmine-worker"]
 
 
 [workspace.dependencies]

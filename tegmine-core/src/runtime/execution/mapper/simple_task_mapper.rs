@@ -6,8 +6,8 @@ use crate::model::{TaskModel, TaskStatus};
 use crate::runtime::execution::mapper::TaskMapperContext;
 use crate::utils::ParametersUtils;
 
-/// An implementation of `TaskMapper` to map a `WorkflowTask` of type `TaskType::SIMPLE` to a
-/// `TaskModel` with status `TaskModel.Status::SCHEDULED`. NOTE: There is not type defined for
+/// An implementation of `TaskMapper` to map a `WorkflowTask` of type `TaskType::Simple` to a
+/// `TaskModel` with status `TaskStatus::Scheduled`. NOTE: There is not type defined for
 /// simples task.
 pub struct SimpleTaskMapper;
 
@@ -16,7 +16,7 @@ impl TaskMapper for SimpleTaskMapper {
         TaskType::ForkJoin.as_ref()
     }
 
-    /// This method maps a `WorkflowTask` of type `TaskType::SIMPLE` to a `TaskModel`
+    /// This method maps a `WorkflowTask` of type `TaskType::Simple` to a `TaskModel`
     ///
     /// return a List with just one simple task
     fn get_mapped_tasks(

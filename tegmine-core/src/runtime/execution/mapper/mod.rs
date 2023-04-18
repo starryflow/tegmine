@@ -4,6 +4,7 @@ mod task_mapper_registry;
 
 mod do_while_task_mapper;
 mod dynamic_task_mapper;
+mod exclusive_join_task_mapper;
 mod fork_join_dynamic_task_mapper;
 mod fork_join_task_mapper;
 mod join_task_mapper;

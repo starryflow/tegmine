@@ -7,7 +7,8 @@ mod run;
 mod utils;
 
 pub use metadata::{
-    RetryLogic, TaskDef, TaskTimeoutPolicy, TaskType, TimeoutPolicy, WorkflowDef, WorkflowTask,
+    RetryLogic, SubWorkflowParams, TaskDef, TaskTimeoutPolicy, TaskType, TimeoutPolicy,
+    WorkflowDef, WorkflowTask,
 };
 pub use run::{RerunWorkflowRequest, SkipTaskRequest, StartWorkflowRequest, TaskResult};
 pub use utils::{EnvUtils, TaskUtils};
