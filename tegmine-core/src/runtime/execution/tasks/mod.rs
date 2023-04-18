@@ -1,4 +1,5 @@
 mod do_while;
+mod exclusive_join;
 mod fork;
 mod join;
 mod set_variable;

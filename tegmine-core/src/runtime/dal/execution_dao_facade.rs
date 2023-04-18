@@ -1,8 +1,11 @@
 use chrono::Utc;
 use tegmine_common::prelude::*;
+use tegmine_common::TaskDef;
 
 use crate::config::Properties;
-use crate::dao::{ExecutionDao, IndexDao, QueueDao};
+use crate::dao::{
+    ConcurrentExecutionLimitDao, ExecutionDao, IndexDao, PollDataDao, QueueDao, RateLimitingDao,
+};
 use crate::model::{TaskModel, TaskSummary, Workflow, WorkflowModel, WorkflowSummary};
 use crate::utils::QueueUtils;
 use crate::WorkflowStatus;
@@ -169,11 +172,20 @@ impl ExecutionDaoFacade {
 
     // getTasksForWorkflow
 
-    // getTaskModel
+    pub fn get_task_model(task_id: &InlineStr) -> Option<TaskModel> {
+        let task_model = Self::get_task_from_datastore(task_id);
+        if let Some(task_model) = &task_model {
+            Self::populate_task_data(task_model);
+        }
+        task_model
+    }
 
     // getTask
 
     // getTaskFromDatastore
+    fn get_task_from_datastore(task_id: &InlineStr) -> Option<TaskModel> {
+        ExecutionDao::get_task(task_id)
+    }
 
     // getTasksByName
 
@@ -254,6 +266,24 @@ impl ExecutionDaoFacade {
     /// ******************************************
     /// *************** Other ********************
     /// ******************************************
+
+    pub fn update_task_last_poll(task_name: &str, domain: &str, worker_id: &str) {
+        if let Err(e) = PollDataDao::update_last_poll_data(task_name, domain, worker_id) {
+            error!(
+                "Error updating PollData for task: {} in domain: {} from worker: {}, error: {}",
+                task_name, domain, worker_id, e
+            );
+            // Monitors.error(this.getClass().getCanonicalName(), "updateTaskLastPoll");
+        }
+    }
+
+    pub fn exceeds_in_progress_limit(task: &TaskModel) -> bool {
+        ConcurrentExecutionLimitDao::exceeds_limit(task)
+    }
+
+    pub fn exceeds_rate_limit_per_frequency(task: &TaskModel, task_def: Option<&TaskDef>) -> bool {
+        RateLimitingDao::exceeds_rate_limit_per_frequency(task, task_def)
+    }
 
     /// Populates the workflow input data and the tasks input/output data if stored in external
     /// payload storage.

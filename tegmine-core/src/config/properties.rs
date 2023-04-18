@@ -5,10 +5,13 @@ pub struct Properties {
     max_workflow_variables_payload_size_threshold: i32,
     /// The timeout duration to set when a workflow is pushed to the decider queue.
     workflow_offset_timeout_sec: i64,
-    ///
-    task_pending_time_threshold_sec: i64,
+    /// The time (in seconds) for which a task execution will be postponed if being rate limited or
+    /// concurrent execution limited.
+    task_execution_postpone_duration_sec: i64,
     /// Used to enable/disable asynchronous indexing to elasticsearch.
     async_indexing_enabled: bool,
+    ///
+    task_pending_time_threshold_sec: i64,
 }
 
 impl Properties {
@@ -20,12 +23,16 @@ impl Properties {
         Properties::default().workflow_offset_timeout_sec
     }
 
-    pub fn get_task_pending_time_threshold_sec() -> i64 {
-        Properties::default().task_pending_time_threshold_sec
+    pub fn get_task_execution_postpone_duration_sec() -> i64 {
+        Properties::default().task_execution_postpone_duration_sec
     }
 
     pub fn is_async_indexing_enabled() -> bool {
         Properties::default().async_indexing_enabled
+    }
+
+    pub fn get_task_pending_time_threshold_sec() -> i64 {
+        Properties::default().task_pending_time_threshold_sec
     }
 }
 
@@ -34,6 +41,7 @@ impl Default for Properties {
         Self {
             max_workflow_variables_payload_size_threshold: 256,
             workflow_offset_timeout_sec: 30,
+            task_execution_postpone_duration_sec: 60,
             async_indexing_enabled: false,
             task_pending_time_threshold_sec: 60 * 60, // 60min
         }
