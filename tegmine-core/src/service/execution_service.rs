@@ -1,10 +1,11 @@
 use chrono::Utc;
 use tegmine_common::prelude::*;
+use tegmine_common::TaskResult;
 
 use crate::config::Properties;
 use crate::dao::QueueDao;
 use crate::model::{Task, TaskStatus, Workflow};
-use crate::runtime::ExecutionDaoFacade;
+use crate::runtime::{ExecutionDaoFacade, WorkflowExecutor};
 use crate::utils::QueueUtils;
 use crate::WorkflowStatus;
 
@@ -99,6 +100,21 @@ impl ExecutionService {
             task_model.poll_count += 1;
             ExecutionDaoFacade::update_task(&mut task_model);
             tasks.push(task_model.to_task());
+
+            // TODO
+            // catch{
+            // warn!(
+            //     "DB operation failed for task: {}, postponing task in queue, error: {}",
+            //     task_id, e
+            // );
+            // Monitors.recordTaskPollError(taskType, domain, e.getClass().getSimpleName());
+            // QueueDao::postpone(
+            //     &queue_name,
+            //     &task_id,
+            //     0,
+            //     Properties::get_task_execution_postpone_duration_sec(),
+            // )?;
+            // }
         }
 
         ExecutionDaoFacade::update_task_last_poll(task_type, domain, worker_id);
@@ -107,6 +123,10 @@ impl ExecutionService {
             let _ = Self::ack_task_received(x);
         });
         Ok(tasks)
+    }
+
+    pub fn update_task(task_result: &TaskResult) -> TegResult<()> {
+        WorkflowExecutor::update_task(task_result)
     }
 
     pub fn ack_task_received(task: &Task) -> bool {

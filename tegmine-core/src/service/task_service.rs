@@ -33,15 +33,18 @@ impl TaskService {
     /// Updates a task.
     ///
     /// return task Id of the updated task.
-    pub fn update_task(task_result: TaskResult) -> String {
-        // debug!(
-        //     "Update Task: {} with callback time:
-        // {}",
-        //     task_result, task_result.callback_after_seconds
-        // );
-        // ExecutionService::update_task(task_result);
-        // debug!("Task: {} updated successfully with callback time: {}",
-        // task_result,task_result.callback_after_seconds); task_result.task_id
-        todo!()
+    pub fn update_task(task_result: TaskResult) -> TegResult<String> {
+        debug!(
+            "Update Task: {:?} with callback time:
+        {}",
+            task_result, task_result.callback_after_seconds
+        );
+
+        ExecutionService::update_task(&task_result)?;
+        debug!(
+            "Task: {:?} updated successfully with callback time: {}",
+            task_result, task_result.callback_after_seconds
+        );
+        Ok(task_result.task_id.to_string())
     }
 }

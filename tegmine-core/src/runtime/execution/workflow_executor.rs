@@ -1,5 +1,6 @@
 use chrono::Utc;
 use tegmine_common::prelude::*;
+use tegmine_common::TaskResult;
 
 use super::tasks::SystemTaskRegistry;
 use super::DeciderService;
@@ -317,7 +318,21 @@ impl WorkflowExecutor {
         result
     }
 
-    // updateTask
+    pub fn update_task(task_result: &TaskResult) -> TegResult<()> {
+        if task_result.extend_lease {
+            Self::extend_lease(task_result);
+            return Ok(());
+        }
+
+        let workflow_id = &task_result.workflow_instance_id;
+        let workflow_instance = ExecutionDaoFacade::get_workflow_model(&workflow_id, false);
+
+        Ok(())
+    }
+
+    fn extend_lease(task_result: &TaskResult) {
+        todo!()
+    }
 
     pub fn handle_workflow_evaluation_event(wee: WorkflowEvaluationEvent) -> TegResult<()> {
         Self::decide(wee.workflow_model)

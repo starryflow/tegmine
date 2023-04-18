@@ -5,5 +5,5 @@ mod metadata;
 mod operation;
 
 pub use dal::ExecutionDaoFacade;
-pub use execution::{Channel, StartWorkflowInput};
+pub use execution::{Channel, StartWorkflowInput, WorkflowExecutor};
 pub use operation::StartWorkflowOperation;
