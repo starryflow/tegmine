@@ -289,8 +289,8 @@ impl ExecutionDaoFacade {
         RateLimitingDao::exceeds_rate_limit_per_frequency(task, task_def)
     }
 
-    pub fn add_task_exec_log(logs: Vec<TaskExecLog>) {
-        // TODO
+    pub fn add_task_exec_log(_logs: Vec<TaskExecLog>) {
+        unimplemented!()
     }
 
     /// Populates the workflow input data and the tasks input/output data if stored in external

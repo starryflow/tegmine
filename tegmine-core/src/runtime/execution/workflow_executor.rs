@@ -1,12 +1,14 @@
 use std::time::Instant;
 
 use chrono::Utc;
+use numtoa::NumToA;
 use tegmine_common::prelude::*;
 use tegmine_common::{TaskResult, TaskResultStatus, TaskType, WorkflowDef};
 
 use super::tasks::SystemTaskRegistry;
 use super::DeciderService;
 use crate::dao::QueueDao;
+use crate::metrics::Monitors;
 use crate::model::{TaskModel, TaskStatus, WorkflowModel, WorkflowStatus};
 use crate::runtime::dal::ExecutionDaoFacade;
 use crate::runtime::event::{WorkflowCreationEvent, WorkflowEvaluationEvent};
@@ -20,6 +22,8 @@ use crate::utils::{IdGenerator, QueueUtils};
 pub struct WorkflowExecutor;
 
 impl WorkflowExecutor {
+    const CLASS_NAME: &'static str = "WorkflowExecutor";
+
     // resetCallbacksForWorkflow
 
     // rerun
@@ -148,7 +152,11 @@ impl WorkflowExecutor {
             workflow.workflow_id.clone()
         );
         //  workflowStatusListener.onWorkflowTerminatedIfEnabled(workflow);
-        // Monitors.recordWorkflowTermination(
+        Monitors::record_workflow_completion(
+            &workflow.workflow_definition.name,
+            workflow.end_time - workflow.create_time,
+            &workflow.owner_app,
+        );
 
         if workflow.has_parent() {
             Self::update_parent_workflow_task(workflow);
@@ -194,7 +202,7 @@ impl WorkflowExecutor {
                 "Failed to update output data for workflow: {}, error: {}",
                 workflow.workflow_id, e
             );
-            // Monitors.error(CLASS_NAME, "terminateWorkflow");
+            Monitors::error(Self::CLASS_NAME, "terminateWorkflow");
         }
 
         // update the failed reference task names
@@ -224,7 +232,11 @@ impl WorkflowExecutor {
         workflow.reason_for_incompletion = reason.clone();
         ExecutionDaoFacade::update_workflow(workflow);
         //  workflowStatusListener.onWorkflowTerminatedIfEnabled(workflow);
-        // Monitors.recordWorkflowTermination(
+        Monitors::record_workflow_termination(
+            &workflow.workflow_definition.name,
+            workflow.status,
+            &workflow.owner_app,
+        );
         info!(
             "Workflow {} is terminated because of {}",
             workflow_id, reason
@@ -290,7 +302,10 @@ impl WorkflowExecutor {
                     )
                     .into(),
                 );
-                // Monitors.recordWorkflowStartError(
+                Monitors::record_workflow_start_error(
+                    &failure_workflow,
+                    "WorkflowContext.get().getClientApp()",
+                );
             }
             workflow
                 .output
@@ -347,8 +362,11 @@ impl WorkflowExecutor {
             // Task was already updated....
             QueueDao::remove(&task_queue_name, &task_result.task_id)?;
             info!("Task: {} has already finished execution with status: {} within workflow: {}. Removed task from queue: {}", task.task_id, task.status.as_ref(), task.workflow_instance_id, task_queue_name);
-            // Monitors.recordUpdateConflict(task.getTaskType(), workflowInstance.getWorkflowName(),
-            // task.getStatus());
+            Monitors::record_update_conflict(
+                &task.task_type,
+                &workflow_instance.workflow_definition.name,
+                task.status,
+            );
             return Ok(());
         }
 
@@ -359,8 +377,11 @@ impl WorkflowExecutor {
                 "Workflow: {:?} has already finished execution. Task update for: {} ignored and removed from Queue: {}.",
                 workflow_instance, task_result.task_id, task_queue_name
             );
-            // Monitors.recordUpdateConflict(task.getTaskType(),
-            // workflowInstance.getWorkflowName(), workflowInstance.getStatus());
+            Monitors::record_update_conflict(
+                &task.task_type,
+                &workflow_instance.workflow_definition.name,
+                task.status,
+            );
             return Ok(());
         }
 
@@ -409,8 +430,10 @@ impl WorkflowExecutor {
                         task.task_id, workflow_id
                     );
                     warn!("{}, error: {}", error_msg, e);
-                    // Monitors.recordTaskQueueOpError(task.getTaskType(),
-                    // workflowInstance.getWorkflowName());
+                    Monitors::record_task_queue_op_error(
+                        &task.task_type,
+                        &workflow_instance.workflow_definition.name,
+                    );
                 } else {
                     debug!(
                         "Task: {:?} removed from taskQueue: {} since the task status is {}",
@@ -433,12 +456,20 @@ impl WorkflowExecutor {
                         "Error postponing the message in queue for task: {} for workflow: {}",
                         task.task_id, workflow_id
                     );
-                    warn!("{}, error: {}", error_msg, e);
+                    error!("{}, error: {}", error_msg, e);
+                    Monitors::record_task_queue_op_error(
+                        &task.task_type,
+                        &workflow_instance.workflow_definition.name,
+                    );
                     return fmt_err!(TransientException, "{}, error: {}", error_msg, e);
                 } else {
-                    debug!("Task: {:?} postponed in taskQueue: {} since the task status is {} with callbackAfterSeconds: {}", task,task_queue_name, task.status.as_ref(), call_back);
-                    // Monitors.recordTaskQueueOpError(task.getTaskType(),
-                    // workflowInstance.getWorkflowName());
+                    debug!(
+                        "Task: {:?} postponed in taskQueue: {} since the task status is {} with callbackAfterSeconds: {}",
+                        task,
+                        task_queue_name,
+                        task.status.as_ref(),
+                        call_back
+                    );
                 }
             }
             TaskStatus::CompletedWithErrors | TaskStatus::Skipped => {}
@@ -451,8 +482,10 @@ impl WorkflowExecutor {
                 task.task_id, workflow_id
             );
             warn!("{}, error: {}", error_msg, e);
-            // Monitors.recordTaskUpdateError(task.getTaskType(),
-            // workflowInstance.getWorkflowName());
+            Monitors::record_task_update_error(
+                &task.task_type,
+                &workflow_instance.workflow_definition.name,
+            );
             return fmt_err!(TransientException, "{}, error: {}", error_msg, e);
         }
 
@@ -465,9 +498,13 @@ impl WorkflowExecutor {
         if task.status.is_terminal() {
             let duration = Self::get_task_duration(0, &task)?;
             let last_duration = task.end_time - task.start_time;
-            // Monitors.recordTaskExecutionTime(task.getTaskDefName(), duration, true,
-            // task.getStatus()); Monitors.recordTaskExecutionTime(task.
-            // getTaskDefName(), lastDuration, false, task.getStatus());
+            Monitors::record_task_execution_time(&task.task_def_name, duration, true, task.status);
+            Monitors::record_task_execution_time(
+                &task.task_def_name,
+                last_duration,
+                false,
+                task.status,
+            );
         }
 
         if !Self::is_lazy_evaluate_workflow(&workflow_instance.workflow_definition, &task) {
@@ -494,7 +531,7 @@ impl WorkflowExecutor {
                     task.task_id, task.workflow_instance_id
                 );
                 error!("{}, error: {}", error_msg, e);
-                // Monitors.recordTaskExtendLeaseError(task.getTaskType(), task.getWorkflowType());
+                Monitors::record_task_extend_lease_error(&task.task_type, &task.workflow_type);
                 return fmt_err!(TransientException, "{}, error: {}", error_msg, e);
             }
         }
@@ -549,8 +586,7 @@ impl WorkflowExecutor {
         };
 
         ExecutionLockService::release_lock(workflow_id);
-        let end = start.elapsed();
-        // Monitors.recordWorkflowDecisionTime(watch.getTime());
+        Monitors::record_workflow_decision_time(start.elapsed().as_millis() as i64);
         decide_result
     }
 
@@ -802,10 +838,14 @@ impl WorkflowExecutor {
         }
 
         // metric to track the distribution of number of tasks within a workflow
-        // Monitors.recordNumTasksInWorkflow(
-        //             workflow.getTasks().size() + tasks.size(),
-        //             workflow.getWorkflowName(),
-        //             String.valueOf(workflow.getWorkflowVersion()));
+        Monitors::record_num_tasks_in_workflow(
+            workflow.tasks.len() as i64 + tasks.len() as i64,
+            &workflow.workflow_definition.name,
+            workflow
+                .workflow_definition
+                .version
+                .numtoa_str(10, &mut [0u8; 16]),
+        );
 
         let mut tasks_to_be_queued = Vec::default();
         fn try_schedule<'a>(
@@ -864,6 +904,7 @@ impl WorkflowExecutor {
                 task_ids, workflow.workflow_id
             );
             error!("{}, error: {}", error_msg, e);
+            Monitors::error(Self::CLASS_NAME, "scheduleTask");
             return str_err!(TerminateWorkflow, error_msg);
         }
 
@@ -880,7 +921,7 @@ impl WorkflowExecutor {
                 workflow.workflow_id,
                 e
             );
-            //    Monitors.error(CLASS_NAME, "scheduleTask");
+            Monitors::error(Self::CLASS_NAME, "scheduleTask");
         }
 
         Ok(started_system_tasks)

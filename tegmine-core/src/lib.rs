@@ -3,6 +3,7 @@
 
 mod config;
 mod dao;
+mod metrics;
 mod model;
 mod runtime;
 mod service;
