@@ -10,7 +10,10 @@ pub use metadata::{
     RetryLogic, SubWorkflowParams, TaskDef, TaskTimeoutPolicy, TaskType, TimeoutPolicy,
     WorkflowDef, WorkflowTask,
 };
-pub use run::{RerunWorkflowRequest, SkipTaskRequest, StartWorkflowRequest, TaskResult};
+pub use run::{
+    RerunWorkflowRequest, SkipTaskRequest, StartWorkflowRequest, TaskExecLog, TaskResult,
+    TaskResultStatus,
+};
 pub use utils::{EnvUtils, TaskUtils};
 
 pub mod prelude;

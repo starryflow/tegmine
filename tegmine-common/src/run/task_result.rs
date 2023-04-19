@@ -1,8 +1,10 @@
+use strum_macros::AsRefStr;
+
 use super::task_exec_log::TaskExecLog;
 use crate::prelude::*;
 
 /// Result of the task execution.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TaskResult {
     pub workflow_instance_id: InlineStr,
     pub task_id: InlineStr,
@@ -20,7 +22,7 @@ pub struct TaskResult {
 
 impl TaskResult {}
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, AsRefStr, Clone, Copy)]
 pub enum TaskResultStatus {
     InProgress,
     Failed,

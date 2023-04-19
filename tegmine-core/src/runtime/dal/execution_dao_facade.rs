@@ -1,6 +1,6 @@
 use chrono::Utc;
 use tegmine_common::prelude::*;
-use tegmine_common::TaskDef;
+use tegmine_common::{TaskDef, TaskExecLog};
 
 use crate::config::Properties;
 use crate::dao::{
@@ -199,15 +199,15 @@ impl ExecutionDaoFacade {
     }
 
     pub fn update_tasks(tasks: &[*mut TaskModel]) {
-        tasks
-            .iter()
-            .for_each(|&x| Self::update_task(from_addr_mut!(x)));
+        tasks.iter().for_each(|&x| {
+            let _ = Self::update_task(from_addr_mut!(x));
+        });
     }
 
     /// Sets the update time for the task. Sets the end time for the task (if task is in terminal
     /// state and end time is not set). Updates the task in the `ExecutionDao` first, then stores it
     /// in the `IndexDao`.
-    pub fn update_task(task_model: &mut TaskModel) {
+    pub fn update_task(task_model: &mut TaskModel) -> TegResult<()> {
         if !task_model.status.is_terminal()
             || (task_model.status.is_terminal() && task_model.update_time == 0)
         {
@@ -218,7 +218,7 @@ impl ExecutionDaoFacade {
         }
 
         Self::externalize_task_data(&task_model);
-        ExecutionDao::update_task(task_model);
+        ExecutionDao::update_task(task_model)?;
 
         // Indexing a task for every update adds a lot of volume. That is ok but if async indexing
         // is enabled and tasks are stored in memory until a block has completed, we would lose a
@@ -228,6 +228,7 @@ impl ExecutionDaoFacade {
         if !Properties::is_async_indexing_enabled() {
             IndexDao::index_task(TaskSummary::new(task_model));
         }
+        Ok(())
     }
 
     fn externalize_task_data(_task_model: &TaskModel) {
@@ -248,7 +249,10 @@ impl ExecutionDaoFacade {
         Ok(())
     }
 
-    // extendLease
+    pub fn extend_lease(task_model: &mut TaskModel) -> TegResult<()> {
+        task_model.update_time = Utc::now().timestamp_millis();
+        ExecutionDao::update_task(task_model)
+    }
 
     // getTaskPollData
 
@@ -283,6 +287,10 @@ impl ExecutionDaoFacade {
 
     pub fn exceeds_rate_limit_per_frequency(task: &TaskModel, task_def: Option<&TaskDef>) -> bool {
         RateLimitingDao::exceeds_rate_limit_per_frequency(task, task_def)
+    }
+
+    pub fn add_task_exec_log(logs: Vec<TaskExecLog>) {
+        // TODO
     }
 
     /// Populates the workflow input data and the tasks input/output data if stored in external

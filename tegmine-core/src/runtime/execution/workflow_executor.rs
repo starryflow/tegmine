@@ -1,6 +1,8 @@
+use std::time::Instant;
+
 use chrono::Utc;
 use tegmine_common::prelude::*;
-use tegmine_common::TaskResult;
+use tegmine_common::{TaskResult, TaskResultStatus, TaskType, WorkflowDef};
 
 use super::tasks::SystemTaskRegistry;
 use super::DeciderService;
@@ -11,6 +13,7 @@ use crate::runtime::event::{WorkflowCreationEvent, WorkflowEvaluationEvent};
 use crate::runtime::execution::tasks::Terminate;
 use crate::runtime::execution::{terminate_workflow_exception, CREATE_EVENT_CHANNEL};
 use crate::runtime::StartWorkflowInput;
+use crate::service::ExecutionLockService;
 use crate::utils::{IdGenerator, QueueUtils};
 
 /// Workflow services provider interface
@@ -157,8 +160,9 @@ impl WorkflowExecutor {
             );
             Self::expedite_lazy_workflow_evaluation(&workflow.parent_workflow_id);
         }
-        // executionLockService.releaseLock(workflow.getWorkflowId());
-        // executionLockService.deleteLock(workflow.getWorkflowId());
+
+        ExecutionLockService::release_lock(&workflow.workflow_id);
+        ExecutionLockService::delete_lock(&workflow.workflow_id);
         Ok(())
     }
 
@@ -178,7 +182,7 @@ impl WorkflowExecutor {
         reason: InlineStr,
         failure_workflow: InlineStr,
     ) -> TegResult<()> {
-        // executionLockService.acquireLock(workflow.getWorkflowId(), 60000);
+        ExecutionLockService::acquire_lock_try_time(&workflow.workflow_id, 60000);
 
         if !workflow.status.is_terminal() {
             workflow.status = WorkflowStatus::Terminated;
@@ -313,33 +317,241 @@ impl WorkflowExecutor {
             Err(e) => Err(e),
         };
 
-        // executionLockService.releaseLock(workflow.getWorkflowId());
-        // executionLockService.deleteLock(workflow.getWorkflowId());
+        ExecutionLockService::release_lock(&workflow.workflow_id);
+        ExecutionLockService::delete_lock(&workflow.workflow_id);
         result
     }
 
-    pub fn update_task(task_result: &TaskResult) -> TegResult<()> {
+    pub fn update_task(mut task_result: TaskResult) -> TegResult<()> {
         if task_result.extend_lease {
-            Self::extend_lease(task_result);
+            Self::extend_lease(task_result)?;
             return Ok(());
         }
 
         let workflow_id = &task_result.workflow_instance_id;
         let workflow_instance = ExecutionDaoFacade::get_workflow_model(&workflow_id, false)?;
 
-        let task = ExecutionDaoFacade::get_task_model(&task_result.task_id).ok_or_else(|| {
-            ErrorCode::NotFound(format!("No such task found by id: {}", task_result.task_id))
-        })?;
+        let mut task =
+            ExecutionDaoFacade::get_task_model(&task_result.task_id).ok_or_else(|| {
+                ErrorCode::NotFound(format!("No such task found by id: {}", task_result.task_id))
+            })?;
+
+        debug!(
+            "Task: {:?} belonging to Workflow {:?} being updated",
+            task, workflow_instance
+        );
+
+        let task_queue_name = QueueUtils::get_queue_name_by_task_model(&task);
+
+        if task.status.is_terminal() {
+            // Task was already updated....
+            QueueDao::remove(&task_queue_name, &task_result.task_id)?;
+            info!("Task: {} has already finished execution with status: {} within workflow: {}. Removed task from queue: {}", task.task_id, task.status.as_ref(), task.workflow_instance_id, task_queue_name);
+            // Monitors.recordUpdateConflict(task.getTaskType(), workflowInstance.getWorkflowName(),
+            // task.getStatus());
+            return Ok(());
+        }
+
+        if workflow_instance.status.is_terminal() {
+            // Workflow is in terminal state
+            QueueDao::remove(&task_queue_name, &task_result.task_id)?;
+            info!(
+                "Workflow: {:?} has already finished execution. Task update for: {} ignored and removed from Queue: {}.",
+                workflow_instance, task_result.task_id, task_queue_name
+            );
+            // Monitors.recordUpdateConflict(task.getTaskType(),
+            // workflowInstance.getWorkflowName(), workflowInstance.getStatus());
+            return Ok(());
+        }
+
+        // for system tasks, setting to SCHEDULED would mean restarting the task which is
+        // undesirable for worker tasks, set status to SCHEDULED and push to the queue
+        if !SystemTaskRegistry::is_system_task(&task.task_type)
+            && task_result.status == TaskResultStatus::InProgress
+        {
+            task.status = TaskStatus::Scheduled;
+        } else {
+            task.status = TaskStatus::try_from(task_result.status.as_ref())
+                .or_else(|_| str_err!(IllegalArgument, "invalid status in task_result"))?;
+        }
+        task.output_message = task_result.output_message;
+        task.reason_for_incompletion = task_result.reason_for_incompletion;
+        task.worker_id = task_result.worker_id;
+        task.callback_after_seconds = task_result.callback_after_seconds;
+        task.output_data = task_result.output_data;
+        task.sub_workflow_id = task_result.sub_workflow_id;
+
+        if !task_result
+            .external_output_payload_storage_path
+            .trim()
+            .is_empty()
+        {
+            task.external_output_payload_storage_path =
+                task_result.external_output_payload_storage_path;
+        }
+
+        if task.status.is_terminal() {
+            task.end_time = Utc::now().timestamp_millis();
+        }
+
+        // Update message in Task queue based on Task status
+        match task.status {
+            TaskStatus::Completed
+            | TaskStatus::Canceled
+            | TaskStatus::Failed
+            | TaskStatus::FailedWithTerminalError
+            | TaskStatus::TimedOut => {
+                if let Err(e) = QueueDao::remove(&task_queue_name, &task_result.task_id) {
+                    // Ignore exceptions on queue remove as it wouldn't impact task and workflow
+                    // execution, and will be cleaned up eventually
+                    let error_msg = format!(
+                        "Error removing the message in queue for task: {} for workflow: {}",
+                        task.task_id, workflow_id
+                    );
+                    warn!("{}, error: {}", error_msg, e);
+                    // Monitors.recordTaskQueueOpError(task.getTaskType(),
+                    // workflowInstance.getWorkflowName());
+                } else {
+                    debug!(
+                        "Task: {:?} removed from taskQueue: {} since the task status is {}",
+                        task,
+                        task_queue_name,
+                        task.status.as_ref()
+                    );
+                }
+            }
+            TaskStatus::InProgress | TaskStatus::Scheduled => {
+                let call_back = task_result.callback_after_seconds;
+                if let Err(e) = QueueDao::postpone(
+                    &task_queue_name,
+                    &task.task_id,
+                    task.workflow_priority,
+                    call_back,
+                ) {
+                    // Throw exceptions on queue postpone, this would impact task execution
+                    let error_msg = format!(
+                        "Error postponing the message in queue for task: {} for workflow: {}",
+                        task.task_id, workflow_id
+                    );
+                    warn!("{}, error: {}", error_msg, e);
+                    return fmt_err!(TransientException, "{}, error: {}", error_msg, e);
+                } else {
+                    debug!("Task: {:?} postponed in taskQueue: {} since the task status is {} with callbackAfterSeconds: {}", task,task_queue_name, task.status.as_ref(), call_back);
+                    // Monitors.recordTaskQueueOpError(task.getTaskType(),
+                    // workflowInstance.getWorkflowName());
+                }
+            }
+            TaskStatus::CompletedWithErrors | TaskStatus::Skipped => {}
+        }
+
+        // Throw a TransientException if below operations fail to avoid workflow inconsistencies.
+        if let Err(e) = ExecutionDaoFacade::update_task(&mut task) {
+            let error_msg = format!(
+                "Error updating task: {} for workflow: {}",
+                task.task_id, workflow_id
+            );
+            warn!("{}, error: {}", error_msg, e);
+            // Monitors.recordTaskUpdateError(task.getTaskType(),
+            // workflowInstance.getWorkflowName());
+            return fmt_err!(TransientException, "{}, error: {}", error_msg, e);
+        }
+
+        task_result
+            .logs
+            .iter_mut()
+            .for_each(|x| x.task_id = task.task_id.clone());
+        ExecutionDaoFacade::add_task_exec_log(task_result.logs);
+
+        if task.status.is_terminal() {
+            let duration = Self::get_task_duration(0, &task)?;
+            let last_duration = task.end_time - task.start_time;
+            // Monitors.recordTaskExecutionTime(task.getTaskDefName(), duration, true,
+            // task.getStatus()); Monitors.recordTaskExecutionTime(task.
+            // getTaskDefName(), lastDuration, false, task.getStatus());
+        }
+
+        if !Self::is_lazy_evaluate_workflow(&workflow_instance.workflow_definition, &task) {
+            Self::decide_workflow_id(workflow_id)?;
+        }
 
         Ok(())
     }
 
-    fn extend_lease(task_result: &TaskResult) {
-        todo!()
+    fn extend_lease(task_result: TaskResult) -> TegResult<()> {
+        let mut task =
+            ExecutionDaoFacade::get_task_model(&task_result.task_id).ok_or_else(|| {
+                ErrorCode::NotFound(format!("No such task found by id: {}", task_result.task_id))
+            })?;
+
+        debug!(
+            "Extend lease for Task: {:?} belonging to Workflow: {}",
+            task, task.workflow_instance_id
+        );
+        if !task.status.is_terminal() {
+            if let Err(e) = ExecutionDaoFacade::extend_lease(&mut task) {
+                let error_msg = format!(
+                    "Error extend lease for Task: {} belonging to Workflow: {}",
+                    task.task_id, task.workflow_instance_id
+                );
+                error!("{}, error: {}", error_msg, e);
+                // Monitors.recordTaskExtendLeaseError(task.getTaskType(), task.getWorkflowType());
+                return fmt_err!(TransientException, "{}, error: {}", error_msg, e);
+            }
+        }
+        Ok(())
+    }
+
+    /// Determines if a workflow can be lazily evaluated, if it meets any of these criteria
+    /// - The task is NOT a loop task within DO_WHILE
+    /// - The task is one of the intermediate tasks in a branch within a FORK_JOIN
+    /// - The task is forked from a FORK_JOIN_DYNAMIC
+    ///
+    /// return true if workflow can be lazily evaluated, false otherwise
+    fn is_lazy_evaluate_workflow(workflow_def: &WorkflowDef, task: &TaskModel) -> bool {
+        if task.iteration > 0 {
+            return false;
+        }
+
+        let task_ref_name = &task.reference_task_name;
+        let workflow_tasks = workflow_def.collect_tasks();
+
+        let fork_tasks = workflow_tasks
+            .iter()
+            .filter(|x| x.type_.eq(TaskType::ForkJoin.as_ref()))
+            .collect::<Vec<_>>();
+
+        let join_tasks = workflow_tasks
+            .iter()
+            .filter(|x| x.type_.eq(TaskType::Join.as_ref()))
+            .collect::<Vec<_>>();
+
+        if fork_tasks.iter().any(|x| x.has(task_ref_name)) {
+            return join_tasks.iter().any(|x| x.join_on.contains(task_ref_name));
+        }
+
+        workflow_tasks
+            .iter()
+            .all(|x| !x.task_reference_name.eq(task_ref_name))
     }
 
     pub fn handle_workflow_evaluation_event(wee: WorkflowEvaluationEvent) -> TegResult<()> {
         Self::decide(wee.workflow_model)
+    }
+
+    pub fn decide_workflow_id(workflow_id: &InlineStr) -> TegResult<()> {
+        let start = Instant::now();
+        if !ExecutionLockService::acquire_lock(workflow_id) {
+            return Ok(());
+        }
+        let decide_result = match ExecutionDaoFacade::get_workflow_model(workflow_id, true) {
+            Ok(workflow) => Self::decide(workflow),
+            Err(e) => Err(e),
+        };
+
+        ExecutionLockService::release_lock(workflow_id);
+        let end = start.elapsed();
+        // Monitors.recordWorkflowDecisionTime(watch.getTime());
+        decide_result
     }
 
     /// return true if the workflow has completed (success or failed), false otherwise.
@@ -462,7 +674,7 @@ impl WorkflowExecutor {
                         );
                     }
                 }
-                ExecutionDaoFacade::update_task(task);
+                ExecutionDaoFacade::update_task(task)?;
             }
         }
         if errored_tasks.is_empty() {
@@ -595,48 +807,65 @@ impl WorkflowExecutor {
         //             workflow.getWorkflowName(),
         //             String.valueOf(workflow.getWorkflowVersion()));
 
-        // Save the tasks in the DAO
-        ExecutionDaoFacade::create_tasks(tasks.as_mut())?;
-
-        let mut system_task = Vec::default();
         let mut tasks_to_be_queued = Vec::default();
-        for task_no_cat in tasks {
-            if SystemTaskRegistry::is_system_task(&task_no_cat.task_type) {
-                system_task.push(task_no_cat);
-            } else {
-                tasks_to_be_queued.push(task_no_cat);
+        fn try_schedule<'a>(
+            mut tasks: Vec<&'a mut TaskModel>,
+            workflow: &WorkflowModel,
+            started_system_tasks: &mut bool,
+            tasks_to_be_queued: &mut Vec<&'a mut TaskModel>,
+        ) -> TegResult<()> {
+            ExecutionDaoFacade::create_tasks(tasks.as_mut())?;
+            let mut system_task = Vec::default();
+
+            for task_no_cat in tasks {
+                if SystemTaskRegistry::is_system_task(&task_no_cat.task_type) {
+                    system_task.push(task_no_cat);
+                } else {
+                    tasks_to_be_queued.push(task_no_cat);
+                }
             }
-        }
+            for task in system_task {
+                let workflow_system_task = SystemTaskRegistry::get(&task.task_type)?;
 
-        // Traverse through all the system tasks, start the sync tasks, in case of async queue
-        // the tasks
-        for task in system_task {
-            let workflow_system_task = SystemTaskRegistry::get(&task.task_type)?;
-
-            if !task.status.is_terminal() && task.start_time == 0 {
-                task.start_time = Utc::now().timestamp_millis();
-            }
-
-            if !workflow_system_task.is_async() {
-                // start execution of synchronous system tasks
-                if let Err(e) = workflow_system_task.start(workflow, &task) {
-                    return fmt_err!(
-                        NonTransient,
-                        "Unable to start system task: {}, {{id: {}, name: {}}}, error: {}",
-                        task.task_type,
-                        task.task_id,
-                        task.task_def_name,
-                        e
-                    );
+                if !task.status.is_terminal() && task.start_time == 0 {
+                    task.start_time = Utc::now().timestamp_millis();
                 }
 
-                started_system_tasks = true;
-                ExecutionDaoFacade::update_task(task);
-            } else {
-                tasks_to_be_queued.push(task);
+                if !workflow_system_task.is_async() {
+                    // start execution of synchronous system tasks
+                    if let Err(e) = workflow_system_task.start(workflow, &task) {
+                        return fmt_err!(
+                            NonTransient,
+                            "Unable to start system task: {}, {{id: {}, name: {}}}, error: {}",
+                            task.task_type,
+                            task.task_id,
+                            task.task_def_name,
+                            e
+                        );
+                    }
+
+                    *started_system_tasks = true;
+                    ExecutionDaoFacade::update_task(task)?;
+                } else {
+                    tasks_to_be_queued.push(task);
+                }
             }
+            Ok(())
         }
-        // TODO Exception process
+        let task_ids = tasks.iter().map(|x| x.task_id.clone()).collect::<Vec<_>>();
+        if let Err(e) = try_schedule(
+            tasks,
+            workflow,
+            &mut started_system_tasks,
+            &mut tasks_to_be_queued,
+        ) {
+            let error_msg = format!(
+                "Error scheduling tasks: {:?}, for workflow: {}",
+                task_ids, workflow.workflow_id
+            );
+            error!("{}, error: {}", error_msg, e);
+            return str_err!(TerminateWorkflow, error_msg);
+        }
 
         // On addTaskToQueue failures, ignore the exceptions and let WorkflowRepairService take care
         // of republishing the messages to the queue.
@@ -662,6 +891,24 @@ impl WorkflowExecutor {
             Self::add_task_to_queue(task)?;
         }
         Ok(())
+    }
+
+    fn get_task_duration(mut s: i64, task: &TaskModel) -> TegResult<i64> {
+        let duration = task.end_time - task.start_time;
+        s += duration;
+        if task.retried_task_id.is_empty() {
+            Ok(s)
+        } else {
+            if let Some(task) = ExecutionDaoFacade::get_task_model(&task.retried_task_id) {
+                Ok(s + Self::get_task_duration(s, &task)?)
+            } else {
+                error!(
+                    "when get_task_duration, can not find task for {}",
+                    task.retried_task_id
+                );
+                Ok(s)
+            }
+        }
     }
 
     fn terminate(
@@ -692,7 +939,7 @@ impl WorkflowExecutor {
                 .unwrap_or(InlineStr::new());
         }
         if let Some(task) = task {
-            ExecutionDaoFacade::update_task(task);
+            ExecutionDaoFacade::update_task(task)?;
         }
 
         Self::terminate_workflow_with_failure_workflow(workflow, reason, failure_workflow)

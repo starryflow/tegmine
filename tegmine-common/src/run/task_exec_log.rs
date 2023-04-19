@@ -1,3 +1,7 @@
+use crate::prelude::*;
+
 /// task's execution log
-#[derive(Debug)]
-pub struct TaskExecLog {}
+#[derive(Debug, Clone)]
+pub struct TaskExecLog {
+    pub task_id: InlineStr,
+}

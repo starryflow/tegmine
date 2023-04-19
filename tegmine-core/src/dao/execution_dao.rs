@@ -89,13 +89,13 @@ impl ExecutionDao {
                 task.task_def_name, task.workflow_instance_id, task.task_id, task.task_type
             );
 
-            Self::update_task(task);
+            Self::update_task(task)?;
         }
 
         Ok(())
     }
 
-    pub fn update_task(task: &mut TaskModel) {
+    pub fn update_task(task: &mut TaskModel) -> TegResult<()> {
         let task_id = task.task_id.clone();
         let task_definition = task.get_task_definition();
 
@@ -167,6 +167,8 @@ impl ExecutionDao {
         if not_exist {
             Self::correlate_task_to_workflow_in_ds(&task.task_id, &task.workflow_instance_id);
         }
+
+        Ok(())
     }
 
     // exceedsLimit

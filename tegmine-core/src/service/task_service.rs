@@ -40,7 +40,7 @@ impl TaskService {
             task_result, task_result.callback_after_seconds
         );
 
-        ExecutionService::update_task(&task_result)?;
+        ExecutionService::update_task(task_result.clone())?;
         debug!(
             "Task: {:?} updated successfully with callback time: {}",
             task_result, task_result.callback_after_seconds

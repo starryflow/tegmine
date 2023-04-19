@@ -46,5 +46,6 @@ build_exceptions! {
     TerminateWorkflow(ErrorCode::TERMINATE_WORKFLOW_CODE),
     NonTransient(1007),
     ScriptEvalFailed(1008),
+    TransientException(1009),
     UnknownException(1999),
 }
