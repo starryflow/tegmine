@@ -64,9 +64,9 @@ where
         let process_fn = self.process_fn.as_ref().unwrap();
 
         match process_fn.call(try_catch, global, &arg_vals) {
-            Some(v) => V8Utils::to_typed_value(v, try_catch).ok_or(ErrorCode::ScriptEvalFailed(
-                format!("convert to object from {:?} failed", v),
-            )),
+            Some(v) => V8Utils::to_typed_value(v, try_catch).ok_or_else(|| {
+                ErrorCode::ScriptEvalFailed(format!("convert to object from {:?} failed", v))
+            }),
             None => {
                 fmt_err!(
                     ScriptEvalFailed,
@@ -89,9 +89,9 @@ where
         ];
 
         match process_fn.call(try_catch, global, arg_vals) {
-            Some(v) => V8Utils::to_typed_value(v, try_catch).ok_or(ErrorCode::ScriptEvalFailed(
-                format!("convert to object from {:?} failed", v),
-            )),
+            Some(v) => V8Utils::to_typed_value(v, try_catch).ok_or_else(|| {
+                ErrorCode::ScriptEvalFailed(format!("convert to object from {:?} failed", v))
+            }),
             None => {
                 fmt_err!(
                     ScriptEvalFailed,

@@ -77,7 +77,7 @@ impl DynamicTaskMapper {
         task_input: &'a HashMap<InlineStr, Object>,
         task_name_param: &InlineStr,
     ) -> TegResult<&'a InlineStr> {
-        task_input.get(task_name_param).and_then(|x|x.as_string().ok()).ok_or(ErrorCode::TerminateWorkflow(format!("Cannot map a dynamic task based on the parameter and input. Parameter= {}, input= {:?}",task_name_param, task_input)))
+        task_input.get(task_name_param).and_then(|x|x.as_string().ok()).ok_or_else(|| ErrorCode::TerminateWorkflow(format!("Cannot map a dynamic task based on the parameter and input. Parameter= {}, input= {:?}",task_name_param, task_input)))
     }
 
     /// This method gets the TaskDefinition for a specific `WorkflowTask`

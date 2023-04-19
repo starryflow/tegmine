@@ -117,7 +117,7 @@ impl TryFrom<&serde_json::Value> for TaskDef {
                 let mut input_keys = Vec::default();
                 for input_key in json
                     .as_array()
-                    .ok_or(ErrorCode::IllegalArgument("inputKeys invalid"))?
+                    .ok_or_else(|| ErrorCode::IllegalArgument("inputKeys invalid"))?
                 {
                     if let Some(input_k) = input_key.as_str() {
                         input_keys.push(input_k.trim().into());
@@ -138,7 +138,7 @@ impl TryFrom<&serde_json::Value> for TaskDef {
                 let mut output_keys = Vec::default();
                 for output_key in json
                     .as_array()
-                    .ok_or(ErrorCode::IllegalArgument("outputKeys invalid"))?
+                    .ok_or_else(|| ErrorCode::IllegalArgument("outputKeys invalid"))?
                 {
                     if let Some(out_k) = output_key.as_str() {
                         output_keys.push(out_k.trim().into());
@@ -161,7 +161,7 @@ impl TryFrom<&serde_json::Value> for TaskDef {
                 value
                     .get("inputTemplate")
                     .and_then(|x| x.as_object())
-                    .ok_or(ErrorCode::IllegalArgument("inputTemplate invalid"))?,
+                    .ok_or_else(|| ErrorCode::IllegalArgument("inputTemplate invalid"))?,
             )
         };
 
@@ -169,7 +169,7 @@ impl TryFrom<&serde_json::Value> for TaskDef {
             name: value
                 .get("name")
                 .and_then(|x| x.as_str())
-                .ok_or(ErrorCode::IllegalArgument("name not found"))?
+                .ok_or_else(|| ErrorCode::IllegalArgument("name not found"))?
                 .trim()
                 .into(),
             description: value
@@ -184,14 +184,12 @@ impl TryFrom<&serde_json::Value> for TaskDef {
                 .as_i64()
                 .map(|x| x as i32)
                 .and_then(|x| if x < 0 || x > 10 { None } else { Some(x) })
-                .ok_or(ErrorCode::IllegalArgument(
-                    "retryCount must in range [0..=10]",
-                ))?,
+                .ok_or_else(|| ErrorCode::IllegalArgument("retryCount must in range [0..=10]"))?,
             retry_logic: RetryLogic::from_str(
                 value
                     .get("retryLogic")
                     .and_then(|x| x.as_str())
-                    .ok_or(ErrorCode::IllegalArgument("retryLogic not found"))?
+                    .ok_or_else(|| ErrorCode::IllegalArgument("retryLogic not found"))?
                     .trim()
                     .into(),
             )
@@ -200,7 +198,7 @@ impl TryFrom<&serde_json::Value> for TaskDef {
                 .get("retryDelaySeconds")
                 .unwrap_or(&serde_json::json!(60))
                 .as_i64()
-                .ok_or(ErrorCode::IllegalArgument("retryDelaySeconds invalid"))?
+                .ok_or_else(|| ErrorCode::IllegalArgument("retryDelaySeconds invalid"))?
                 as i32,
             timeout_policy: TimeoutPolicy::from_str(
                 value
@@ -215,20 +213,20 @@ impl TryFrom<&serde_json::Value> for TaskDef {
                 .get("timeoutSeconds")
                 .unwrap_or(&serde_json::json!(0))
                 .as_i64()
-                .ok_or(ErrorCode::IllegalArgument("timeoutSeconds invalid"))?
+                .ok_or_else(|| ErrorCode::IllegalArgument("timeoutSeconds invalid"))?
                 as i32,
             response_timeout_seconds: value
                 .get("responseTimeoutSeconds")
                 .unwrap_or(&serde_json::json!(3600))
                 .as_i64()
-                .ok_or(ErrorCode::IllegalArgument("responseTimeoutSeconds invalid"))?
+                .ok_or_else(|| ErrorCode::IllegalArgument("responseTimeoutSeconds invalid"))?
                 as i32,
             poll_timeout_seconds: value
                 .get("pollTimeoutSeconds")
                 .unwrap_or(&serde_json::json!(0))
                 .as_i64()
                 .and_then(|x| if (x as i32) < 0 { None } else { Some(x as i32) })
-                .ok_or(ErrorCode::IllegalArgument("pollTimeoutSeconds invalid"))?,
+                .ok_or_else(|| ErrorCode::IllegalArgument("pollTimeoutSeconds invalid"))?,
             input_keys,
             output_keys,
             input_template,
@@ -248,7 +246,7 @@ impl TryFrom<&serde_json::Value> for TaskDef {
                 .get("ownerEmail")
                 .unwrap_or(&serde_json::json!(""))
                 .as_str()
-                .ok_or(ErrorCode::IllegalArgument("ownerEmail invalid"))?
+                .ok_or_else(|| ErrorCode::IllegalArgument("ownerEmail invalid"))?
                 .trim()
                 .into(),
             isolation_group_id: InlineStr::default(),

@@ -115,9 +115,7 @@ impl TryFrom<&serde_json::Value> for WorkflowDef {
             for input_param in value
                 .get("inputParameters")
                 .and_then(|x| x.as_array())
-                .ok_or(ErrorCode::IllegalArgument(
-                    "inputParameters invalid, not a array",
-                ))?
+                .ok_or_else(|| ErrorCode::IllegalArgument("inputParameters invalid, not a array"))?
             {
                 if let Some(input_p) = input_param.as_str() {
                     input_parameters.push(input_p.trim().into());
@@ -140,7 +138,7 @@ impl TryFrom<&serde_json::Value> for WorkflowDef {
                     value
                         .get("outputParameters")
                         .and_then(|x| x.as_object())
-                        .ok_or(ErrorCode::IllegalArgument("outputParameters invalid"))?,
+                        .ok_or_else(|| ErrorCode::IllegalArgument("outputParameters invalid"))?,
                 )
             };
 
@@ -152,7 +150,7 @@ impl TryFrom<&serde_json::Value> for WorkflowDef {
                 value
                     .get("inputTemplate")
                     .and_then(|x| x.as_object())
-                    .ok_or(ErrorCode::IllegalArgument("inputTemplate invalid"))?,
+                    .ok_or_else(|| ErrorCode::IllegalArgument("inputTemplate invalid"))?,
             )
         };
 
@@ -160,7 +158,7 @@ impl TryFrom<&serde_json::Value> for WorkflowDef {
             name: value
                 .get("name")
                 .and_then(|x| x.as_str())
-                .ok_or(ErrorCode::IllegalArgument("WorkflowDef: name not found"))?
+                .ok_or_else(|| ErrorCode::IllegalArgument("WorkflowDef: name not found"))?
                 .trim()
                 .into(),
             description: value
@@ -173,15 +171,15 @@ impl TryFrom<&serde_json::Value> for WorkflowDef {
                 .get("version")
                 .unwrap_or(&serde_json::json!(0))
                 .as_i64()
-                .ok_or(ErrorCode::IllegalArgument("WorkflowDef: version invalid"))?
+                .ok_or_else(|| ErrorCode::IllegalArgument("WorkflowDef: version invalid"))?
                 as i32,
             tasks: WorkflowTask::try_from_jsonlist(
                 value
                     .get("tasks")
                     .and_then(|x| x.as_array())
-                    .ok_or(ErrorCode::IllegalArgument(
-                        "WorkflowDef: tasks not found or not array",
-                    ))?,
+                    .ok_or_else(|| {
+                        ErrorCode::IllegalArgument("WorkflowDef: tasks not found or not array")
+                    })?,
             )?,
             input_parameters,
             output_parameters,
@@ -190,9 +188,7 @@ impl TryFrom<&serde_json::Value> for WorkflowDef {
                 .get("failureWorkflow")
                 .unwrap_or(&serde_json::json!(""))
                 .as_str()
-                .ok_or(ErrorCode::IllegalArgument(
-                    "WorkflowDef: failureWorkflow invalid",
-                ))?
+                .ok_or_else(|| ErrorCode::IllegalArgument("WorkflowDef: failureWorkflow invalid"))?
                 .trim()
                 .into(),
             schema_version: 2,
@@ -200,40 +196,36 @@ impl TryFrom<&serde_json::Value> for WorkflowDef {
                 .get("restartable")
                 .unwrap_or(&serde_json::json!(true))
                 .as_bool()
-                .ok_or(ErrorCode::IllegalArgument(
-                    "WorkflowDef: restartable invalid",
-                ))?,
+                .ok_or_else(|| ErrorCode::IllegalArgument("WorkflowDef: restartable invalid"))?,
             workflow_status_listener_enabled: value
                 .get("workflowStatusListenerEnabled")
                 .unwrap_or(&serde_json::json!(false))
                 .as_bool()
-                .ok_or(ErrorCode::IllegalArgument(
-                    "WorkflowDef: workflowStatusListenerEnabled invalid",
-                ))?,
+                .ok_or_else(|| {
+                    ErrorCode::IllegalArgument("WorkflowDef: workflowStatusListenerEnabled invalid")
+                })?,
             owner_email: value
                 .get("ownerEmail")
                 .unwrap_or(&serde_json::json!(""))
                 .as_str()
-                .ok_or(ErrorCode::IllegalArgument(
-                    "WorkflowDef: ownerEmail invalid",
-                ))?
+                .ok_or_else(|| ErrorCode::IllegalArgument("WorkflowDef: ownerEmail invalid"))?
                 .trim()
                 .into(),
             timeout_seconds: value
                 .get("timeoutSeconds")
                 .unwrap_or(&serde_json::json!(0))
                 .as_i64()
-                .ok_or(ErrorCode::IllegalArgument(
-                    "WorkflowDef: timeoutSeconds not found",
-                ))? as i32,
+                .ok_or_else(|| {
+                    ErrorCode::IllegalArgument("WorkflowDef: timeoutSeconds not found")
+                })? as i32,
             timeout_policy: TimeoutPolicy::from_str(
                 value
                     .get("timeoutPolicy")
                     .unwrap_or(&serde_json::json!("TIME_OUT_WF"))
                     .as_str()
-                    .ok_or(ErrorCode::IllegalArgument(
-                        "WorkflowDef: timeoutPolicy invalid",
-                    ))?
+                    .ok_or_else(|| {
+                        ErrorCode::IllegalArgument("WorkflowDef: timeoutPolicy invalid")
+                    })?
                     .trim(),
             )
             .map_err(|_| ErrorCode::IllegalArgument("WorkflowDef: timeoutPolicy invalid"))?,

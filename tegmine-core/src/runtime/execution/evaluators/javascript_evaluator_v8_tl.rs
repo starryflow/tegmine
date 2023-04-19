@@ -77,12 +77,12 @@ impl Evaluator for JavascriptEvaluatorV8Tl {
                     let arg_vals = [V8Utils::wrap_value(input, &mut try_catch)];
 
                     match process_fn.call(&mut try_catch, global, &arg_vals) {
-                        Some(v) => V8Utils::to_typed_value(v, &mut try_catch).ok_or(
+                        Some(v) => V8Utils::to_typed_value(v, &mut try_catch).ok_or_else(|| {
                             ErrorCode::ScriptEvalFailed(format!(
                                 "convert to object from {:?} failed",
                                 v
-                            )),
-                        ),
+                            ))
+                        }),
                         None => {
                             fmt_err!(
                                 ScriptEvalFailed,

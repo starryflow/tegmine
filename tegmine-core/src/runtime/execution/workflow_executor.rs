@@ -325,7 +325,11 @@ impl WorkflowExecutor {
         }
 
         let workflow_id = &task_result.workflow_instance_id;
-        let workflow_instance = ExecutionDaoFacade::get_workflow_model(&workflow_id, false);
+        let workflow_instance = ExecutionDaoFacade::get_workflow_model(&workflow_id, false)?;
+
+        let task = ExecutionDaoFacade::get_task_model(&task_result.task_id).ok_or_else(|| {
+            ErrorCode::NotFound(format!("No such task found by id: {}", task_result.task_id))
+        })?;
 
         Ok(())
     }

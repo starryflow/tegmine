@@ -25,10 +25,12 @@ impl MetadataMapperService {
 
         // Check if the workflow definition is valid
         potential_def
-            .ok_or(ErrorCode::NotFound(format!(
-                "No such workflow defined. name={}, version={:?}",
-                name, version
-            )))
+            .ok_or_else(|| {
+                ErrorCode::NotFound(format!(
+                    "No such workflow defined. name={}, version={:?}",
+                    name, version
+                ))
+            })
             .inspect_err(|_| {
                 error!(
                     "There is no workflow defined with name {} and version {:?}",

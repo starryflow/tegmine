@@ -37,12 +37,9 @@ static REGISTRY: Lazy<DashMap<InlineStr, Box<dyn WorkflowSystemTask>>> = Lazy::n
 
 impl SystemTaskRegistry {
     pub fn get(task_type: &str) -> TegResult<Ref<'static, InlineStr, Box<dyn WorkflowSystemTask>>> {
-        REGISTRY
-            .get(&InlineStr::from(task_type))
-            .ok_or(ErrorCode::IllegalArgument(format!(
-                "{} not found in SystemTaskRegistry",
-                task_type
-            )))
+        REGISTRY.get(&InlineStr::from(task_type)).ok_or_else(|| {
+            ErrorCode::IllegalArgument(format!("{} not found in SystemTaskRegistry", task_type))
+        })
     }
 
     pub fn is_system_task(task_type: &str) -> bool {

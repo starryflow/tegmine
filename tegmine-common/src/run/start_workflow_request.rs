@@ -49,7 +49,7 @@ impl TryFrom<serde_json::Value> for StartWorkflowRequest {
                 let mut task_to_domain = HashMap::default();
                 for (k, v) in json
                     .as_object()
-                    .ok_or(ErrorCode::IllegalArgument("taskToDomain invalid"))?
+                    .ok_or_else(|| ErrorCode::IllegalArgument("taskToDomain invalid"))?
                 {
                     if let Some(v) = v.as_str() {
                         task_to_domain.insert(k.into(), v.into());
@@ -78,7 +78,7 @@ impl TryFrom<serde_json::Value> for StartWorkflowRequest {
             name: value
                 .get("name")
                 .and_then(|x| x.as_str())
-                .ok_or(ErrorCode::IllegalArgument("name not found"))?
+                .ok_or_else(|| ErrorCode::IllegalArgument("name not found"))?
                 .trim()
                 .into(),
             version: value
@@ -89,7 +89,7 @@ impl TryFrom<serde_json::Value> for StartWorkflowRequest {
                 value
                     .get("input")
                     .and_then(|x| x.as_object())
-                    .ok_or(ErrorCode::IllegalArgument("input invalid"))?,
+                    .ok_or_else(|| ErrorCode::IllegalArgument("input invalid"))?,
             ),
             correlation_id: value
                 .get("correlationId")
@@ -111,9 +111,7 @@ impl TryFrom<serde_json::Value> for StartWorkflowRequest {
                 .as_i64()
                 .map(|x| x as i32)
                 .and_then(|x| if x < 0 || x > 99 { None } else { Some(x) })
-                .ok_or(ErrorCode::IllegalArgument(
-                    "priority must in range [0..=99]",
-                ))?,
+                .ok_or_else(|| ErrorCode::IllegalArgument("priority must in range [0..=99]"))?,
         })
     }
 }

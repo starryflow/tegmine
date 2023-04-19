@@ -111,9 +111,9 @@ fn execute_global_func(
     let ref mut try_catch = v8::TryCatch::new(scope);
 
     match func.call(try_catch, undefined.into(), &arg_vals) {
-        Some(v) => DenoUtils::to_typed_value(v, try_catch).ok_or(ErrorCode::ScriptEvalFailed(
-            format!("convert to object from {:?} failed", v),
-        )),
+        Some(v) => DenoUtils::to_typed_value(v, try_catch).ok_or_else(|| {
+            ErrorCode::ScriptEvalFailed(format!("convert to object from {:?} failed", v))
+        }),
         None => {
             return fmt_err!(
                 ScriptEvalFailed,
