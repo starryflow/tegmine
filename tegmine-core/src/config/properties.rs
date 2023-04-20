@@ -1,48 +1,38 @@
 pub struct Properties {
+    /// The timeout duration to set when a workflow is pushed to the decider queue.
+    pub workflow_offset_timeout_sec: i64,
+    /// The time (in seconds) for which a task execution will be postponed if being rate limited or
+    /// concurrent execution limited.
+    pub task_execution_postpone_duration_sec: i64,
+    /// Used to enable/disable asynchronous indexing to elasticsearch.
+    pub async_indexing_enabled: bool,
+
+    /// Used to enable/disable the workflow execution lock.
+    pub workflow_execution_lock_enabled: bool,
+    /// The time (in milliseconds) for which the lock is leased for.
+    pub lock_lease_time_ms: i64,
+    /// The time (in milliseconds) for which the thread will block in an attempt to acquire the
+    /// lock.
+    pub lock_time_to_try_ms: i64,
+
     /// The maximum threshold of the workflow variables payload size in KB beyond which the task
     /// changes will be rejected and the task will be marked as FAILED_WITH_TERMINAL_ERROR.
     /// KILOBYTES
-    max_workflow_variables_payload_size_threshold: i32,
-    /// The timeout duration to set when a workflow is pushed to the decider queue.
-    workflow_offset_timeout_sec: i64,
-    /// The time (in seconds) for which a task execution will be postponed if being rate limited or
-    /// concurrent execution limited.
-    task_execution_postpone_duration_sec: i64,
-    /// Used to enable/disable asynchronous indexing to elasticsearch.
-    async_indexing_enabled: bool,
+    pub max_workflow_variables_payload_size_threshold: i32,
     ///
-    task_pending_time_threshold_sec: i64,
-}
-
-impl Properties {
-    pub fn get_max_workflow_variables_payload_size_threshold() -> i32 {
-        Properties::default().max_workflow_variables_payload_size_threshold
-    }
-
-    pub fn get_workflow_offset_timeout_sec() -> i64 {
-        Properties::default().workflow_offset_timeout_sec
-    }
-
-    pub fn get_task_execution_postpone_duration_sec() -> i64 {
-        Properties::default().task_execution_postpone_duration_sec
-    }
-
-    pub fn is_async_indexing_enabled() -> bool {
-        Properties::default().async_indexing_enabled
-    }
-
-    pub fn get_task_pending_time_threshold_sec() -> i64 {
-        Properties::default().task_pending_time_threshold_sec
-    }
+    pub task_pending_time_threshold_sec: i64,
 }
 
 impl Default for Properties {
     fn default() -> Self {
         Self {
-            max_workflow_variables_payload_size_threshold: 256,
             workflow_offset_timeout_sec: 30,
             task_execution_postpone_duration_sec: 60,
             async_indexing_enabled: false,
+            workflow_execution_lock_enabled: false,
+            lock_lease_time_ms: 60000,
+            lock_time_to_try_ms: 500,
+            max_workflow_variables_payload_size_threshold: 256,
             task_pending_time_threshold_sec: 60 * 60, // 60min
         }
     }

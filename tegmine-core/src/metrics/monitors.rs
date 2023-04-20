@@ -38,4 +38,6 @@ impl Monitors {
     pub fn record_task_extend_lease_error(task_type: &str, workflow_type: &str) {}
 
     pub fn record_num_tasks_in_workflow(count: i64, name: &str, version: &str) {}
+
+    pub fn record_acquire_lock_unsuccessful() {}
 }

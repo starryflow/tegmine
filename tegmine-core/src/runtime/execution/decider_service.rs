@@ -701,7 +701,7 @@ impl DeciderService {
         };
         let pending_time = now - (reference_time + callback_time);
         //  Monitors.recordTaskPendingTime(task.getTaskType(), task.getWorkflowType(), pendingTime);
-        let threshold_ms = Properties::get_task_pending_time_threshold_sec() * 1000;
+        let threshold_ms = Properties::default().task_pending_time_threshold_sec * 1000;
         if pending_time > threshold_ms {
             warn!(
                 "Task: {} of type: {} in workflow: {}/{} is in pending state for longer than {} ms",

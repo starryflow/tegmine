@@ -62,7 +62,7 @@ impl ExecutionService {
                     &queue_name,
                     &task_id,
                     task_model.workflow_priority,
-                    Properties::get_task_execution_postpone_duration_sec(),
+                    Properties::default().task_execution_postpone_duration_sec,
                 ) {
                     catch(e, &queue_name, &task_id);
                 } else {
@@ -70,7 +70,7 @@ impl ExecutionService {
                         "Postponed task: {} in queue: {} by {} seconds",
                         task_id,
                         queue_name,
-                        Properties::get_task_execution_postpone_duration_sec()
+                        Properties::default().task_execution_postpone_duration_sec
                     );
                 }
                 continue;
@@ -85,7 +85,7 @@ impl ExecutionService {
                     &queue_name,
                     &task_id,
                     task_model.workflow_priority,
-                    Properties::get_task_execution_postpone_duration_sec(),
+                    Properties::default().task_execution_postpone_duration_sec,
                 ) {
                     catch(e, &queue_name, &task_id);
                 } else {
@@ -123,7 +123,7 @@ impl ExecutionService {
                     queue_name,
                     &task_id,
                     0,
-                    Properties::get_task_execution_postpone_duration_sec(),
+                    Properties::default().task_execution_postpone_duration_sec,
                 );
             }
         }

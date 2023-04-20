@@ -79,9 +79,9 @@ impl ExecutionDaoFacade {
             QueueDao::DECIDER_QUEUE,
             &workflow_model.workflow_id,
             workflow_model.priority,
-            Properties::get_workflow_offset_timeout_sec(),
+            Properties::default().workflow_offset_timeout_sec,
         );
-        if Properties::is_async_indexing_enabled() {
+        if Properties::default().async_indexing_enabled {
             IndexDao::async_index_workflow(WorkflowSummary::new(workflow_model));
         } else {
             IndexDao::index_workflow(WorkflowSummary::new(workflow_model));
@@ -96,7 +96,7 @@ impl ExecutionDaoFacade {
         }
         Self::externalize_workflow_data(&workflow_model);
         ExecutionDao::update_workflow(workflow_model);
-        if Properties::is_async_indexing_enabled() {
+        if Properties::default().async_indexing_enabled {
             unimplemented!()
         } else {
             IndexDao::index_workflow(WorkflowSummary::new(workflow_model));
@@ -225,7 +225,7 @@ impl ExecutionDaoFacade {
         // lot of tasks on a system failure. So only index for each update if async indexing is not
         // enabled. If it *is* enabled, tasks will be indexed only when a workflow is in
         // terminal state.
-        if !Properties::is_async_indexing_enabled() {
+        if !Properties::default().async_indexing_enabled {
             IndexDao::index_task(TaskSummary::new(task_model));
         }
         Ok(())

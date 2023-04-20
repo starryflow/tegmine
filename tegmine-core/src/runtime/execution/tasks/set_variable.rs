@@ -12,7 +12,7 @@ pub struct SetVariable;
 
 impl SetVariable {
     fn validate_variables_size(workflow: &WorkflowModel) -> Option<String> {
-        let max_threshold = Properties::get_max_workflow_variables_payload_size_threshold();
+        let max_threshold = Properties::default().max_workflow_variables_payload_size_threshold;
 
         let payload_size = Object::estimate_map_memory_used(&workflow.variables);
         if payload_size > max_threshold * 1024 {
