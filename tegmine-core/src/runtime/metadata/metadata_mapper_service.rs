@@ -3,6 +3,7 @@ use tegmine_common::prelude::*;
 use tegmine_common::{TaskDef, TaskType, WorkflowDef, WorkflowTask};
 
 use crate::dao::MetadataDao;
+use crate::metrics::Monitors;
 
 /// Populates metadata definitions within workflow objects. Benefits of loading and populating
 /// metadata definitions upfront could be:
@@ -99,8 +100,10 @@ impl MetadataMapperService {
                 "Cannot find the task definitions for the following tasks used in workflow: {:?}",
                 missing_task_definition_names
             );
-            // Monitors.recordWorkflowStartError(
-            // &workflow_definition.name, WorkflowContext.get().getClientApp());
+            Monitors::record_workflow_start_error(
+                &workflow_definition.name,
+                "WorkflowContext.get().getClientApp()",
+            );
             fmt_err!(
                 IllegalArgument,
                 "Cannot find the task definitions for the following tasks used in workflow: {:?}",

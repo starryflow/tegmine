@@ -1,6 +1,7 @@
 use tegmine_common::prelude::*;
 use tegmine_common::TaskResult;
 
+use crate::metrics::Monitors;
 use crate::model::Task;
 use crate::ExecutionService;
 
@@ -26,7 +27,7 @@ impl TaskService {
             worker_id,
             domain
         );
-        // Monitors.recordTaskPollCount(taskType, domain, polledTasks.size());
+        Monitors::record_task_poll_count(task_type, domain, polled_tasks.len() as i32);
         Ok(polled_tasks)
     }
 

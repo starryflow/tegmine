@@ -11,6 +11,6 @@ impl ConcurrentExecutionLimitDao {
     /// return true if by executing this task, the limit is breached. false otherwise.
     pub fn exceeds_limit(task: &TaskModel) -> bool {
         // TODO
-        true
+        false
     }
 }

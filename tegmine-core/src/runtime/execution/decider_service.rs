@@ -10,6 +10,7 @@ use tegmine_common::{
 use super::tasks::SystemTaskRegistry;
 use crate::config::Properties;
 use crate::dao::MetadataDao;
+use crate::metrics::Monitors;
 use crate::model::{TaskModel, TaskStatus, WorkflowModel, WorkflowStatus};
 use crate::runtime::execution::mapper::{TaskMapperContext, TaskMapperRegistry};
 use crate::runtime::execution::terminate_workflow_exception;
@@ -593,15 +594,21 @@ impl DeciderService {
             return Ok(());
         }
 
-        let reason = format!("Workflow timed out after {} seconds. Timeout configured as {} seconds. Timeout policy configured to {}",elapsed_time/1000,workflow_def.timeout_seconds,workflow_def.timeout_policy.as_ref());
+        let reason = format!(
+            "Workflow timed out after {} seconds. Timeout configured as {} seconds. Timeout policy configured to {}",
+            elapsed_time / 1000,
+            workflow_def.timeout_seconds,
+            workflow_def.timeout_policy.as_ref()
+        );
 
         match workflow_def.timeout_policy {
             TimeoutPolicy::AlertOnly => {
                 info!("{} {}", workflow.workflow_id, reason);
-                // Monitors.recordWorkflowTermination(
-                //         workflow.getWorkflowName(),
-                //         WorkflowModel.Status.TIMED_OUT,
-                //         workflow.getOwnerApp());
+                Monitors::record_workflow_termination(
+                    &workflow.workflow_definition.name,
+                    WorkflowStatus::TimedOut,
+                    &workflow.owner_app,
+                );
                 Ok(())
             }
             TimeoutPolicy::TimeOutWf => {
@@ -664,7 +671,7 @@ impl DeciderService {
         task_def: &TaskDef,
         task: &mut TaskModel,
     ) -> TegResult<()> {
-        // Monitors.recordTaskTimeout(task.getTaskDefName());
+        Monitors::record_task_timeout(&task.task_def_name);
         match task_def.timeout_policy {
             TaskTimeoutPolicy::AlertOnly => {
                 info!("{}", reason);
@@ -700,7 +707,7 @@ impl DeciderService {
             task.scheduled_time
         };
         let pending_time = now - (reference_time + callback_time);
-        //  Monitors.recordTaskPendingTime(task.getTaskType(), task.getWorkflowType(), pendingTime);
+        Monitors::record_task_pending_time(&task.task_type, &task.workflow_type, pending_time);
         let threshold_ms = Properties::default().task_pending_time_threshold_sec * 1000;
         if pending_time > threshold_ms {
             warn!(
@@ -730,7 +737,7 @@ impl DeciderService {
             return false;
         }
 
-        // Monitors.recordTaskResponseTimeout(task.getTaskDefName());
+        Monitors::record_task_response_timeout(&task.task_def_name);
         true
     }
 

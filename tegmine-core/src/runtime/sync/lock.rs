@@ -9,10 +9,14 @@ impl Lock {
         time_to_try_ms: i64,
         lease_time_ms: i64,
     ) -> bool {
-        true
+        unimplemented!()
     }
 
-    pub fn release_lock(lock_id: &InlineStr) {}
+    pub fn release_lock(lock_id: &InlineStr) {
+        unimplemented!()
+    }
 
-    pub fn delete_lock(lock_id: &InlineStr) {}
+    pub fn delete_lock(lock_id: &InlineStr) {
+        unimplemented!()
+    }
 }

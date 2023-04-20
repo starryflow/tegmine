@@ -19,6 +19,8 @@ impl Monitors {
     ) {
     }
 
+    pub fn record_workflow_start_success(workflow_type: &str, version: &str, owner_app: &str) {}
+
     pub fn record_workflow_start_error(workflow_type: &str, owner_app: &str) {}
 
     pub fn record_update_conflict(task_type: &str, workflow_type: &str, status: TaskStatus) {}
@@ -40,4 +42,18 @@ impl Monitors {
     pub fn record_num_tasks_in_workflow(count: i64, name: &str, version: &str) {}
 
     pub fn record_acquire_lock_unsuccessful() {}
+
+    pub fn record_task_poll(task_type: &str) {}
+
+    pub fn record_task_poll_error(task_type: &str, domain: &str, exception: &str) {}
+
+    pub fn record_task_poll_count(task_type: &str, domain: &str, count: i32) {}
+
+    pub fn record_task_response_timeout(task_type: &str) {}
+
+    pub fn record_task_timeout(task_type: &str) {}
+
+    pub fn record_task_pending_time(task_type: &str, workflow_type: &str, duration: i64) {}
+
+    pub fn record_queue_wait_time(task_type: &str, queue_wait_time: i64) {}
 }

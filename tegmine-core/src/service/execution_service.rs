@@ -1,9 +1,11 @@
 use chrono::Utc;
+use numtoa::NumToA;
 use tegmine_common::prelude::*;
 use tegmine_common::TaskResult;
 
 use crate::config::Properties;
 use crate::dao::QueueDao;
+use crate::metrics::Monitors;
 use crate::model::{Task, TaskStatus, Workflow};
 use crate::runtime::{ExecutionDaoFacade, WorkflowExecutor};
 use crate::utils::QueueUtils;
@@ -12,6 +14,7 @@ use crate::WorkflowStatus;
 pub struct ExecutionService;
 
 impl ExecutionService {
+    const CLASS_NAME: &'static str = "ExecutionService";
     const MAX_POLL_TIMEOUT_MS: i32 = 5000;
 
     pub fn poll(
@@ -40,15 +43,19 @@ impl ExecutionService {
                 "Error polling for task: {} from worker: {} in domain: {}, count: {}, error: {:?}",
                 task_type, worker_id, domain, count, e
             );
-            // Monitors.error(this.getClass().getCanonicalName(), "taskPoll");
-            // Monitors.recordTaskPollError(taskType, domain, e.getClass().getSimpleName());
+            Monitors::error(Self::CLASS_NAME, "taskPoll");
+            Monitors::record_task_poll_error(
+                task_type,
+                domain,
+                e.code().numtoa_str(10, &mut [0; 16]),
+            );
             Vec::default()
         }) {
             let task_model = ExecutionDaoFacade::get_task_model(&task_id);
             if task_model.is_none() || task_model.as_ref().expect("not none").status.is_terminal() {
                 // Remove taskId(s) without a valid Task/terminal state task from the queue
                 if let Err(e) = QueueDao::remove(&queue_name, &task_id) {
-                    catch(e, &queue_name, &task_id);
+                    catch(e, &queue_name, task_type, domain, &task_id);
                 } else {
                     debug!("Removed task: {} from the queue: {}", task_id, queue_name);
                 }
@@ -64,7 +71,7 @@ impl ExecutionService {
                     task_model.workflow_priority,
                     Properties::default().task_execution_postpone_duration_sec,
                 ) {
-                    catch(e, &queue_name, &task_id);
+                    catch(e, &queue_name, task_type, domain, &task_id);
                 } else {
                     debug!(
                         "Postponed task: {} in queue: {} by {} seconds",
@@ -87,7 +94,7 @@ impl ExecutionService {
                     task_model.workflow_priority,
                     Properties::default().task_execution_postpone_duration_sec,
                 ) {
-                    catch(e, &queue_name, &task_id);
+                    catch(e, &queue_name, task_type, domain, &task_id);
                 } else {
                     debug!(
                         "RateLimit Execution limited for {}:{}, limit:{}",
@@ -100,25 +107,37 @@ impl ExecutionService {
             task_model.status = TaskStatus::InProgress;
             if task_model.start_time == 0 {
                 task_model.start_time = Utc::now().timestamp_millis();
-                // Monitors.recordQueueWaitTime(
-                //             taskModel.getTaskDefName(), taskModel.getQueueWaitTime());
+                Monitors::record_queue_wait_time(
+                    &task_model.task_def_name,
+                    task_model.get_queue_wait_time(),
+                );
             }
             // reset callbackAfterSeconds when giving the task to the worker
             task_model.callback_after_seconds = 0;
             task_model.worker_id = worker_id.into();
             task_model.poll_count += 1;
             if let Err(e) = ExecutionDaoFacade::update_task(&mut task_model) {
-                catch(e, &queue_name, &task_id);
+                catch(e, &queue_name, task_type, domain, &task_id);
             } else {
                 tasks.push(task_model.to_task());
             }
 
-            fn catch(e: ErrorCode, queue_name: &InlineStr, task_id: &InlineStr) {
+            fn catch(
+                e: ErrorCode,
+                queue_name: &InlineStr,
+                task_type: &str,
+                domain: &str,
+                task_id: &InlineStr,
+            ) {
                 warn!(
                     "DB operation failed for task: {}, postponing task in queue, error: {}",
                     task_id, e
                 );
-                // Monitors.recordTaskPollError(taskType, domain, e.getClass().getSimpleName());
+                Monitors::record_task_poll_error(
+                    task_type,
+                    domain,
+                    e.code().numtoa_str(10, &mut [0; 16]),
+                );
                 let _ = QueueDao::postpone(
                     queue_name,
                     &task_id,
@@ -129,7 +148,7 @@ impl ExecutionService {
         }
 
         ExecutionDaoFacade::update_task_last_poll(task_type, domain, worker_id);
-        // Monitors.recordTaskPoll(queueName);
+        Monitors::record_task_poll(&queue_name);
         tasks.iter().for_each(|x| {
             let _ = Self::ack_task_received(x);
         });

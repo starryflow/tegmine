@@ -6,6 +6,7 @@ use crate::config::Properties;
 use crate::dao::{
     ConcurrentExecutionLimitDao, ExecutionDao, IndexDao, PollDataDao, QueueDao, RateLimitingDao,
 };
+use crate::metrics::Monitors;
 use crate::model::{TaskModel, TaskSummary, Workflow, WorkflowModel, WorkflowSummary};
 use crate::utils::QueueUtils;
 use crate::WorkflowStatus;
@@ -15,6 +16,8 @@ use crate::WorkflowStatus;
 pub struct ExecutionDaoFacade;
 
 impl ExecutionDaoFacade {
+    const CLASS_NAME: &'static str = "ExecutionDaoFacade";
+
     /// ******************************************
     /// *************** Workflow *****************
     /// ******************************************
@@ -277,7 +280,8 @@ impl ExecutionDaoFacade {
                 "Error updating PollData for task: {} in domain: {} from worker: {}, error: {}",
                 task_name, domain, worker_id, e
             );
-            // Monitors.error(this.getClass().getCanonicalName(), "updateTaskLastPoll");
+
+            Monitors::error(Self::CLASS_NAME, "updateTaskLastPoll");
         }
     }
 

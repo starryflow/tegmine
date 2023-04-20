@@ -1,3 +1,4 @@
+use chrono::Utc;
 use numtoa::NumToA;
 use strum_macros::{AsRefStr, EnumString};
 use tegmine_common::prelude::*;
@@ -119,6 +120,24 @@ impl TaskModel {
         task_name.push_str("_");
         task_name.push_str(self.retry_count.numtoa_str(10, &mut [0u8; 16]));
         task_name
+    }
+
+    pub fn get_queue_wait_time(&self) -> i64 {
+        if self.start_time > 0 && self.scheduled_time > 0 {
+            if self.update_time > 0 && self.callback_after_seconds > 0 {
+                let wait_time = Utc::now().timestamp_millis()
+                    - (self.update_time + self.callback_after_seconds * 1000);
+                if wait_time > 0 {
+                    wait_time
+                } else {
+                    0
+                }
+            } else {
+                self.start_time - self.scheduled_time
+            }
+        } else {
+            0
+        }
     }
 
     pub fn to_task(self) -> Task {

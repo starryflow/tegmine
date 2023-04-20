@@ -1,6 +1,8 @@
+use numtoa::NumToA;
 use tegmine_common::prelude::*;
 use tegmine_common::WorkflowDef;
 
+use crate::metrics::Monitors;
 use crate::model::WorkflowModel;
 use crate::runtime::dal::ExecutionDaoFacade;
 use crate::runtime::event::{WorkflowCreationEvent, WorkflowEvaluationEvent};
@@ -60,14 +62,26 @@ impl StartWorkflowOperation {
             workflow.external_input_payload_storage_path = external_input_payload_storage_path;
         }
 
-        let workflow_name = workflow.workflow_definition.name.clone();
+        let (workflow_name, workflow_version, owner_app) = (
+            workflow.workflow_definition.name.clone(),
+            workflow.workflow_definition.version,
+            workflow.owner_app.clone(),
+        );
         match Self::create_and_evaluate(workflow) {
             Ok(_) => {
-                // Monitors.recordWorkflowStartSuccess(
+                Monitors::record_workflow_start_success(
+                    &workflow_name,
+                    workflow_version.numtoa_str(10, &mut [0; 16]),
+                    &owner_app,
+                );
                 Ok(workflow_id.into())
             }
             Err(e) => {
-                //  Monitors.recordWorkflowStartError(
+                Monitors::record_workflow_start_error(
+                    &workflow_name,
+                    "WorkflowContext.get().getClientApp()",
+                );
+
                 error!("Unable to start workflow: {}, error: {}", workflow_name, e);
 
                 // It's possible the remove workflow call hits an exception as well, in that case we
@@ -119,8 +133,10 @@ impl StartWorkflowOperation {
                 "The input for the workflow '{}' cannot be NULL",
                 &workflow_def.name
             );
-            // Monitors.recordWorkflowStartError(
-            // &workflow_def.name, WorkflowContext.get().getClientApp());
+            Monitors::record_workflow_start_error(
+                &workflow_def.name,
+                "WorkflowContext.get().getClientApp()",
+            );
             str_err!(IllegalArgument, "NULL input passed when starting workflow")
         } else {
             Ok(())
