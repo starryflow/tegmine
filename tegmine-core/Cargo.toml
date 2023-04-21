@@ -23,8 +23,9 @@ crossbeam-channel = { workspace = true }
 
 # Data structures
 dashmap = { workspace = true }
-linked-hash-map = { workspace = true }
 either = { workspace = true }
+keyed_priority_queue = { workspace = true }
+linked-hash-map = { workspace = true }
 
 # Date and time
 chrono = { workspace = true }
