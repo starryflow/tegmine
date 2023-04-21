@@ -1,10 +1,13 @@
 [workspace.package]
 version = "0.1.0"
-description = ""
+description = "Tegmine is a workflow engine inspired by Conductor."
+homepage = "https://github.com/starryflow/tegmine"
+repository = "https://github.com/starryflow/tegmine"
 authors = ["Starryflow <opensource@starryflow.com>"]
 license = "Apache-2.0"
 publish = false
 edition = "2021"
+readme = "README.md"
 
 [workspace]
 members = ["tegmine-common", "tegmine-core", "tegmine-server", "tegmine-worker"]
