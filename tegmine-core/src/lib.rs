@@ -9,8 +9,12 @@ mod runtime;
 mod service;
 mod utils;
 
-pub use model::WorkflowStatus;
+pub use model::{TaskModel, TaskStatus, WorkflowModel, WorkflowStatus};
+pub use runtime::{
+    SystemTaskRegistry, TaskMapper, TaskMapperContext, TaskMapperRegistry, WorkflowSystemTask,
+};
 pub use service::{ExecutionService, MetadataService, TaskService, WorkflowService};
+pub use utils::ParametersUtils;
 
 pub fn initialize() {
     // utils::V8Utils::set_up_v8_globally();

@@ -35,14 +35,30 @@ static REGISTRY: Lazy<DashMap<InlineStr, Box<dyn WorkflowSystemTask>>> = Lazy::n
     map
 });
 
+static CUSTOM_REGISTRY: Lazy<DashMap<InlineStr, Box<dyn WorkflowSystemTask>>> =
+    Lazy::new(|| DashMap::new());
+
 impl SystemTaskRegistry {
     pub fn get(task_type: &str) -> TegResult<Ref<'static, InlineStr, Box<dyn WorkflowSystemTask>>> {
-        REGISTRY.get(&InlineStr::from(task_type)).ok_or_else(|| {
-            ErrorCode::IllegalArgument(format!("{} not found in SystemTaskRegistry", task_type))
-        })
+        let task_type = InlineStr::from(task_type);
+        REGISTRY
+            .get(&task_type)
+            .or(CUSTOM_REGISTRY.get(&task_type))
+            .ok_or_else(|| {
+                ErrorCode::IllegalArgument(format!("{} not found in SystemTaskRegistry", task_type))
+            })
     }
 
     pub fn is_system_task(task_type: &str) -> bool {
-        REGISTRY.contains_key(&InlineStr::from(task_type))
+        let task_type = InlineStr::from(task_type);
+        REGISTRY.contains_key(&task_type) || CUSTOM_REGISTRY.contains_key(&task_type)
+    }
+
+    pub fn register(task_type: &str, task: Box<dyn WorkflowSystemTask>) {
+        CUSTOM_REGISTRY.insert(InlineStr::from(task_type), task);
+    }
+
+    pub fn unregister(task_type: &str) {
+        CUSTOM_REGISTRY.remove(&InlineStr::from(task_type));
     }
 }

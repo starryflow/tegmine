@@ -191,7 +191,7 @@ impl ParametersUtils {
         param_string: InlineStr,
         document_context: &mut Either<HashMap<InlineStr, Object>, serde_json::Value>,
         task_id: Option<&InlineStr>,
-    ) -> InlineStr {
+    ) -> Object {
         lazy_static! {
             static ref DOLLAR_REGEX: Regex =
                 Regex::new(r"(?=(?<!\$)\$\{)|(?<=})").expect("regex compile error");
@@ -202,63 +202,69 @@ impl ParametersUtils {
         let mut values = Vec::default();
         let mut matches = DOLLAR_REGEX.find_iter(&param_string);
         let mut last = 0;
+        let text = matches.text();
         loop {
-            let text = matches.text();
             match matches.next() {
                 None => {
-                    if last > text.len() {
+                    if last >= text.len() {
                         break;
                     } else {
                         let s = &text[last..];
-                        last = text.len() + 1; // Next call will return None
                         debug!("find matched: {}", s);
                         values.push(s);
+
+                        last = text.len() + 1; // Next call will return None
                     }
                 }
                 Some(Ok(m)) => {
-                    let matched = &text[last..m.start()];
+                    if last != m.start() {
+                        let matched = &text[last..m.start()];
+                        debug!("find matched: {}", matched);
+                        values.push(matched);
+                    }
                     last = m.end();
-                    debug!("find matched: {}", matched);
-                    values.push(matched);
                 }
                 Some(Err(e)) => {
                     error!("regex match failed, error: {}", e);
                 }
             }
         }
-        let mut converted_values = Vec::with_capacity(values.len());
+        let mut converted_values: Vec<Object> = Vec::with_capacity(values.len());
         for v in values {
             if v.starts_with("${") && v.ends_with("}") {
                 let param_path = &v[2..v.len() - 1];
                 // if the paramPath is blank, meaning no value in between ${ and }
                 // like ${}, ${  } etc, set the value to empty string
                 if param_path.trim().is_empty() {
-                    converted_values.push("".into());
+                    converted_values.push(InlineStr::from("").into());
                     continue;
                 }
                 if let Some(sys_value) = EnvUtils::get_system_parameters_value(param_path, task_id)
                 {
-                    converted_values.push(sys_value);
+                    converted_values.push(sys_value.into());
                 } else {
                     converted_values.push(Object::read(document_context, param_path))
                 }
             } else if v.contains("$${") {
-                converted_values.push(DOUBLE_DOLLAR_REGEX.replace(v, r"\${").into());
+                converted_values
+                    .push(InlineStr::from(DOUBLE_DOLLAR_REGEX.replace(v, r"\${")).into());
             } else {
                 converted_values.push(v.into());
             }
         }
 
-        let mut ret_obj = converted_values[0].clone();
+        let ret_obj = converted_values[0].clone();
         // If the parameter String was "v1 v2 v3" then make sure to stitch it
         if converted_values.len() > 1 {
+            let mut ret_obj = converted_values[0].to_string();
             for (i, val) in converted_values.into_iter().enumerate() {
                 if i == 0 {
-                    ret_obj = val;
+                    ret_obj = val.to_string();
                 } else {
-                    ret_obj.push_str(val.as_str());
+                    ret_obj.push_str(&val.to_string());
                 }
             }
+            return ret_obj.into();
         }
 
         ret_obj

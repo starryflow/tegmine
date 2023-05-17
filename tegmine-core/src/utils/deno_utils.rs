@@ -24,14 +24,14 @@ impl DenoUtils {
                 let v8_i64 = v8::BigInt::new_from_i64(context_scope, *value);
                 v8::Local::<v8::Value>::from(v8_i64)
             }
-            // Object::Float(value) => {
-            //     let v8_number = v8::Number::new(scope, (*value) as f32);
-            //     v8::Local::<v8::Value>::from(v8_number)
-            // }
-            // Object::Double(value) => {
-            //     let v8_number = v8::Number::new(scope, *value);
-            //     v8::Local::<v8::Value>::from(v8_number)
-            // }
+            Object::Float(value) => {
+                let v8_number = v8::Number::new(scope, (*value) as f64);
+                v8::Local::<v8::Value>::from(v8_number)
+            }
+            Object::Double(value) => {
+                let v8_number = v8::Number::new(scope, *value);
+                v8::Local::<v8::Value>::from(v8_number)
+            }
             Object::Boolean(value) => {
                 let v8_bool = v8::Boolean::new(scope, *value);
                 v8::Local::<v8::Value>::from(v8_bool)

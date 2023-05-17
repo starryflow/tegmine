@@ -36,14 +36,23 @@ static REGISTRY: Lazy<DashMap<InlineStr, Box<dyn TaskMapper>>> = Lazy::new(|| {
     map
 });
 
+static CUSTOM_REGISTRY: Lazy<DashMap<InlineStr, Box<dyn TaskMapper>>> =
+    Lazy::new(|| DashMap::new());
+
 pub struct TaskMapperRegistry;
 
 impl TaskMapperRegistry {
     pub fn get_task_mapper(typ_: &InlineStr) -> Ref<InlineStr, Box<dyn TaskMapper>> {
-        REGISTRY.get(typ_).unwrap_or_else(|| {
-            REGISTRY
-                .get(TaskType::UserDefined.as_ref().into())
-                .expect("USER_DEFINE not none")
-        })
+        // FIXME not none check, CUSTOM_REGISTRY
+        REGISTRY
+            .get(typ_)
+            .or(CUSTOM_REGISTRY.get(typ_))
+            .expect("USER_DEFINE not none")
+    }
+    pub fn register(typ_: &str, task_mapper: Box<dyn TaskMapper>) {
+        CUSTOM_REGISTRY.insert(InlineStr::from(typ_), task_mapper);
+    }
+    pub fn unregister(typ_: &str) {
+        CUSTOM_REGISTRY.remove(&InlineStr::from(typ_));
     }
 }

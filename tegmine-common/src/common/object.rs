@@ -9,6 +9,8 @@ use crate::prelude::{debug, fmt_err, ErrorCode, InlineStr, TegResult};
 pub enum Object {
     Int(i32),
     Long(i64),
+    Float(f32),
+    Double(f64),
     Boolean(bool),
     String(InlineStr),
     Map(HashMap<InlineStr, Object>), // TODO: use BTreeMap instead
@@ -27,7 +29,7 @@ impl Object {
     pub fn read(
         document_context: &mut Either<HashMap<InlineStr, Object>, serde_json::Value>,
         path: &str,
-    ) -> InlineStr {
+    ) -> Object {
         let value = if let Some(value) = document_context.as_ref().right() {
             value
         } else {
@@ -45,11 +47,13 @@ impl Object {
         debug!("json for select is: {}", value);
         if let Ok(json) = jsonpath_lib::select(&value, format!("$.{}", path).as_str()) {
             if let Some(&v) = json.get(0) {
-                if let serde_json::Value::String(v) = v {
-                    return v.into();
-                } else {
-                    return v.to_string().into();
-                }
+                // if let serde_json::Value::String(v) = v {
+                //     return v.into();
+                // } else {
+                //     return v.to_string().into();
+                // }
+                debug!("found select path: {}", v);
+                return Object::from_json(v);
             }
         }
         "".into()
@@ -73,6 +77,9 @@ impl Object {
         match self {
             Object::Int(v) => (*v).numtoa_str(10, &mut [0; 16]).into(),
             Object::Long(v) => (*v).numtoa_str(10, &mut [0; 32]).into(),
+            // TODO better way
+            Object::Float(v) => v.to_string().into(),
+            Object::Double(v) => v.to_string().into(),
             Object::Boolean(v) => {
                 if *v {
                     "True".into()
@@ -108,6 +115,8 @@ impl Object {
         match self {
             Object::Int(_) => 4,
             Object::Long(_) => 8,
+            Object::Float(_) => 4,
+            Object::Double(_) => 8,
             Object::Boolean(_) => 1,
             Object::String(v) => v.as_bytes().len() as i32,
             Object::Map(v) => Self::estimate_map_memory_used(v),
@@ -139,6 +148,8 @@ impl Object {
         match self {
             Object::Int(v) => serde_json::Value::Number((*v).into()),
             Object::Long(v) => serde_json::Value::Number((*v).into()),
+            Object::Float(v) => (*v).into(),
+            Object::Double(v) => (*v).into(),
             Object::Boolean(v) => serde_json::Value::Bool(*v),
             Object::String(v) => serde_json::Value::String(v.to_string()),
             Object::Map(v) => Self::convert_hashmap_to_json(v),
@@ -166,6 +177,12 @@ impl Object {
                         Object::Int(v as i32)
                     } else {
                         Object::Long(v)
+                    }
+                } else if let Some(v) = v.as_f64() {
+                    if v < f32::MAX as f64 && v > f32::MIN as f64 {
+                        Object::Float(v as f32)
+                    } else {
+                        Object::Double(v)
                     }
                 } else {
                     unimplemented!()
@@ -203,6 +220,16 @@ impl From<i32> for Object {
 impl From<i64> for Object {
     fn from(value: i64) -> Self {
         Object::Long(value)
+    }
+}
+impl From<f32> for Object {
+    fn from(value: f32) -> Self {
+        Object::Float(value)
+    }
+}
+impl From<f64> for Object {
+    fn from(value: f64) -> Self {
+        Object::Double(value)
     }
 }
 impl From<bool> for Object {

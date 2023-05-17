@@ -12,3 +12,4 @@ mod workflow_system_task;
 
 pub use system_task_registry::SystemTaskRegistry;
 pub use terminate::Terminate;
+pub use workflow_system_task::WorkflowSystemTask;
