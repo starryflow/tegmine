@@ -1,5 +1,7 @@
+use std::time::Duration;
+
 use crossbeam_channel::{Receiver, Sender};
-use dashmap::{DashMap, DashSet};
+use dashmap::DashMap;
 use futures::executor::{ThreadPool, ThreadPoolBuilder};
 use tegmine_common::prelude::*;
 use tegmine_common::StartWorkflowRequest;
@@ -7,7 +9,9 @@ use tegmine_common::StartWorkflowRequest;
 use super::WorkflowExecutor;
 use crate::runtime::event::{WorkflowCreationEvent, WorkflowEvaluationEvent};
 use crate::runtime::StartWorkflowOperation;
+use crate::ExecutionService;
 use crate::WorkflowService;
+
 pub static CREATE_EVENT_CHANNEL: Lazy<(
     Sender<WorkflowCreationEvent>,
     Receiver<WorkflowCreationEvent>,
@@ -27,6 +31,8 @@ static POOL: Lazy<ThreadPool> = Lazy::new(|| {
 });
 
 pub static WAITING_QUEUE: Lazy<DashMap<InlineStr, Sender<()>>> = Lazy::new(|| DashMap::new());
+pub static ASYNC_WAITING_QUEUE: Lazy<DashMap<InlineStr, tokio::sync::oneshot::Sender<()>>> =
+    Lazy::new(|| DashMap::new());
 
 pub struct Channel;
 
@@ -43,11 +49,27 @@ impl Channel {
                 let id = wee.workflow_model.workflow_id.clone();
                 let _ = WorkflowExecutor::handle_workflow_evaluation_event(wee);
 
-                // notify caller if using block_execute
-                if let Some(sender) = WAITING_QUEUE.get(&id) {
-                    sender.value().send(());
+                // notify caller if using async_execute
+                if let Some((_, sender)) = ASYNC_WAITING_QUEUE.remove(&id) {
+                    if let Err(_) = sender.send(()) {
+                        error!(
+                            "failed to send to caller after workflow finished, workflow id: {}",
+                            id,
+                        );
+                    }
+                    return;
                 }
-                WAITING_QUEUE.remove(&id);
+
+                // notify caller if using block_execute
+                if let Some((_, sender)) = WAITING_QUEUE.remove(&id) {
+                    if let Err(e) = sender.send(()) {
+                        error!(
+                            "failed to send to caller after workflow finished, workflow id: {}, {}",
+                            id, e
+                        );
+                    }
+                    return;
+                }
             });
         }
     }
@@ -63,10 +85,65 @@ impl Channel {
 
     pub fn block_execute(
         request: StartWorkflowRequest,
-        sender: Sender<()>,
-    ) -> TegResult<InlineStr> {
+        timeout: Duration,
+    ) -> TegResult<HashMap<InlineStr, Object>> {
+        let (sender, receiver) = crossbeam_channel::bounded(0);
+
         let workflow_instance_id = WorkflowService::start_workflow(request)?;
         WAITING_QUEUE.insert(workflow_instance_id.clone(), sender);
-        Ok(workflow_instance_id)
+
+        receiver.recv_timeout(timeout).map_err(|e| {
+            warn!(
+                "failed to execute workflow, workflow id: {}, {}",
+                workflow_instance_id, e
+            );
+            ErrorCode::ExecutionException(format!(
+                "failed to execute workflow, it tasks too long, workflow id: {}",
+                workflow_instance_id
+            ))
+        })?;
+        Self::fetch_execute_output(workflow_instance_id.as_str())
+    }
+
+    pub async fn async_execute(
+        request: StartWorkflowRequest,
+    ) -> TegResult<HashMap<InlineStr, Object>> {
+        let (sender, receiver) = tokio::sync::oneshot::channel();
+
+        let workflow_instance_id = WorkflowService::start_workflow(request)?;
+        ASYNC_WAITING_QUEUE.insert(workflow_instance_id.clone(), sender);
+
+        receiver.await.map_err(|e| {
+            warn!(
+                "failed to execute workflow, workflow id: {}, {}",
+                workflow_instance_id, e
+            );
+            ErrorCode::ExecutionException(format!(
+                "failed to execute workflow, workflow id: {}",
+                workflow_instance_id
+            ))
+        })?;
+        Self::fetch_execute_output(workflow_instance_id.as_str())
+    }
+
+    fn fetch_execute_output(workflow_instance_id: &str) -> TegResult<HashMap<InlineStr, Object>> {
+        let (workflow_status, workflow) =
+            ExecutionService::get_execution_status(workflow_instance_id, false)?;
+
+        if workflow_status.is_terminal() && workflow_status.is_successful() {
+            let output = workflow
+                .ok_or(ErrorCode::ExecutionException(format!(
+                    "failed to get workflow output, workflow id: {}",
+                    workflow_instance_id
+                )))?
+                .workflow
+                .output;
+            return Ok(output);
+        } else {
+            return Err(ErrorCode::ExecutionException(format!(
+                "workflow execute failed, workflow id: {}",
+                workflow_instance_id
+            )));
+        }
     }
 }

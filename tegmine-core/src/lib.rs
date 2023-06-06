@@ -9,13 +9,14 @@ mod runtime;
 mod service;
 mod utils;
 
-use crossbeam_channel::Sender;
+use std::{collections::HashMap, time::Duration};
+
 pub use model::{TaskModel, TaskStatus, WorkflowModel, WorkflowStatus};
 pub use runtime::{
     SystemTaskRegistry, TaskMapper, TaskMapperContext, TaskMapperRegistry, WorkflowSystemTask,
 };
 pub use service::{ExecutionService, MetadataService, TaskService, WorkflowService};
-use tegmine_common::prelude::InlineStr;
+use tegmine_common::prelude::{InlineStr, Object};
 pub use utils::ParametersUtils;
 
 pub fn initialize() {
@@ -38,9 +39,15 @@ pub fn evaluate_once() -> tegmine_common::prelude::TegResult<()> {
 
 pub fn block_execute_workflow(
     start_workflow_request: tegmine_common::StartWorkflowRequest,
-    sender: Sender<()>,
-) -> tegmine_common::prelude::TegResult<InlineStr> {
-    runtime::Channel::block_execute(start_workflow_request, sender)
+    timeout: Duration,
+) -> tegmine_common::prelude::TegResult<HashMap<InlineStr, Object>> {
+    runtime::Channel::block_execute(start_workflow_request, timeout)
+}
+
+pub async fn async_execute_workflow(
+    start_workflow_request: tegmine_common::StartWorkflowRequest,
+) -> tegmine_common::prelude::TegResult<HashMap<InlineStr, Object>> {
+    runtime::Channel::async_execute(start_workflow_request).await
 }
 
 #[cfg(test)]

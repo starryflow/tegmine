@@ -20,6 +20,7 @@ md5 = { workspace = true }
 # Asynchronous 
 crossbeam-channel = { workspace = true }
 futures = { workspace = true }
+tokio = { workspace = true }
 
 
 # Data structures
