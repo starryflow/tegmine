@@ -23,6 +23,18 @@ impl MetadataService {
         MetadataDao::update_workflow_def(workflow_def)
     }
 
+    pub fn unregister_workflow_def(name: &InlineStr, version: i32) -> TegResult<()> {
+        MetadataDao::remove_workflow_def(name, version)
+    }
+
+    pub fn toggle_workflow_def(name: &InlineStr, enable: bool)->TegResult<()> {
+        MetadataDao::toggle_workflow_def(name, enable)
+    }
+
+    pub fn check_workflow_def_enabled(name: &InlineStr) -> bool {
+        MetadataDao::check_workflow_def_endabled(name)
+    }
+
     /// ******************************************
     /// *************** Task ********************
     /// ******************************************

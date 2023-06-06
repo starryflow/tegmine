@@ -15,6 +15,7 @@ static WORKFLOW_DEF: Lazy<DashMap<InlineStr, HashMap<i32, WorkflowDef>>> =
     Lazy::new(|| DashMap::new());
 
 static WORKFLOW_DEF_NAMES: Lazy<DashSet<InlineStr>> = Lazy::new(|| DashSet::new());
+static DISABLED_WORKFLOW_DEF: Lazy<DashSet<InlineStr>> = Lazy::new(|| DashSet::new());
 
 impl MetadataDao {
     /// ******************************************
@@ -94,6 +95,28 @@ impl MetadataDao {
             .insert(version, workflow_def);
 
         WORKFLOW_DEF_NAMES.insert(workflow_name.clone());
+    }
+
+    pub fn toggle_workflow_def(name: &InlineStr, enable: bool) -> TegResult<()> {
+        if !WORKFLOW_DEF_NAMES.contains(name) {
+            return Err(ErrorCode::NotFound(
+                "Cannot change the status: {} - no such workflow definition",
+            ));
+        }
+
+        if enable {
+            DISABLED_WORKFLOW_DEF.remove(name);
+        } else {
+            DISABLED_WORKFLOW_DEF.insert(name.clone());
+        }
+        Ok(())
+    }
+
+    pub fn check_workflow_def_endabled(name: &str) -> bool {
+        if !WORKFLOW_DEF_NAMES.contains(name) {
+            return false;
+        }
+        !DISABLED_WORKFLOW_DEF.contains(name)
     }
 
     pub fn get_latest_workflow_def(
@@ -180,6 +203,7 @@ impl MetadataDao {
             if max_version.is_none() {
                 WORKFLOW_DEF.remove(name);
                 WORKFLOW_DEF_NAMES.remove(name);
+                DISABLED_WORKFLOW_DEF.remove(name);
             }
             Ok(())
         }

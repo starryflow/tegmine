@@ -4,6 +4,7 @@ use tegmine_common::{TaskDef, TaskType, WorkflowDef, WorkflowTask};
 
 use crate::dao::MetadataDao;
 use crate::metrics::Monitors;
+use crate::MetadataService;
 
 /// Populates metadata definitions within workflow objects. Benefits of loading and populating
 /// metadata definitions upfront could be:
@@ -18,6 +19,17 @@ impl MetadataMapperService {
         name: &InlineStr,
         version: Option<i32>,
     ) -> TegResult<(Ref<InlineStr, HashMap<i32, WorkflowDef>>, &WorkflowDef)> {
+        if !MetadataService::check_workflow_def_enabled(name) {
+            error!(
+                "There is no enabled workflow defined with name {} and version {:?}",
+                name, version
+            );
+            return Err(ErrorCode::NotFound(format!(
+                "No such enabled workflow defined. name={}, version={:?}",
+                name, version
+            )));
+        }
+
         let potential_def = if let Some(version) = version {
             Self::lookup_workflow_definition(name, version)
         } else {
