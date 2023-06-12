@@ -34,7 +34,7 @@ serde_json = { workspace = true }
 strum = { workspace = true }
 strum_macros = { workspace = true }
 
-# Development tools 
+# Observing
 log = { workspace = true }
 
 # Text processing 
