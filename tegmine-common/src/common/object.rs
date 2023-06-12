@@ -128,7 +128,7 @@ impl Object {
 
 /// json <-> object
 impl Object {
-    fn convert_hashmap_to_json(hash_map: &HashMap<InlineStr, Object>) -> serde_json::Value {
+    pub fn convert_hashmap_to_json(hash_map: &HashMap<InlineStr, Object>) -> serde_json::Value {
         let mut map = serde_json::Map::with_capacity(hash_map.len());
         for (k, v) in hash_map {
             map.insert(k.to_string(), v.to_json());
@@ -136,26 +136,12 @@ impl Object {
         serde_json::Value::Object(map)
     }
 
-    fn convert_list_to_json(list: &Vec<Object>) -> serde_json::Value {
+    pub fn convert_list_to_json(list: &Vec<Object>) -> serde_json::Value {
         let mut json_list = Vec::with_capacity(list.len());
         for v in list {
             json_list.push(v.to_json());
         }
         serde_json::Value::Array(json_list)
-    }
-
-    pub fn to_json(&self) -> serde_json::Value {
-        match self {
-            Object::Int(v) => serde_json::Value::Number((*v).into()),
-            Object::Long(v) => serde_json::Value::Number((*v).into()),
-            Object::Float(v) => (*v).into(),
-            Object::Double(v) => (*v).into(),
-            Object::Boolean(v) => serde_json::Value::Bool(*v),
-            Object::String(v) => serde_json::Value::String(v.to_string()),
-            Object::Map(v) => Self::convert_hashmap_to_json(v),
-            Object::List(v) => Self::convert_list_to_json(v),
-            Object::Null => serde_json::Value::Null,
-        }
     }
 
     pub fn convert_jsonmap_to_hashmap(
@@ -168,7 +154,25 @@ impl Object {
         map
     }
 
-    fn from_json(json: &serde_json::Value) -> Object {
+    pub fn convert_jsonmap_to_object(
+        json_map: &serde_json::Map<String, serde_json::Value>,
+    ) -> Object {
+        let mut map = HashMap::with_capacity(json_map.len());
+        for (k, v) in json_map {
+            map.insert(k.into(), Self::from_json(v));
+        }
+        Object::Map(map)
+    }
+
+    pub fn convert_jsonlist_to_object(json_list: &Vec<serde_json::Value>) -> Object {
+        let mut list = Vec::with_capacity(json_list.len());
+        for v in json_list {
+            list.push(Self::from_json(v));
+        }
+        Object::List(list)
+    }
+
+    pub fn from_json(json: &serde_json::Value) -> Object {
         match json {
             serde_json::Value::Bool(v) => (*v).into(),
             serde_json::Value::Number(v) => {
@@ -195,20 +199,18 @@ impl Object {
         }
     }
 
-    fn convert_jsonmap_to_object(json_map: &serde_json::Map<String, serde_json::Value>) -> Object {
-        let mut map = HashMap::with_capacity(json_map.len());
-        for (k, v) in json_map {
-            map.insert(k.into(), Self::from_json(v));
+    pub fn to_json(&self) -> serde_json::Value {
+        match self {
+            Object::Int(v) => serde_json::Value::Number((*v).into()),
+            Object::Long(v) => serde_json::Value::Number((*v).into()),
+            Object::Float(v) => (*v).into(),
+            Object::Double(v) => (*v).into(),
+            Object::Boolean(v) => serde_json::Value::Bool(*v),
+            Object::String(v) => serde_json::Value::String(v.to_string()),
+            Object::Map(v) => Self::convert_hashmap_to_json(v),
+            Object::List(v) => Self::convert_list_to_json(v),
+            Object::Null => serde_json::Value::Null,
         }
-        Object::Map(map)
-    }
-
-    fn convert_jsonlist_to_object(json_list: &Vec<serde_json::Value>) -> Object {
-        let mut list = Vec::with_capacity(json_list.len());
-        for v in json_list {
-            list.push(Self::from_json(v));
-        }
-        Object::List(list)
     }
 }
 
