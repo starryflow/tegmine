@@ -17,7 +17,7 @@ impl WorkflowSystemTask for StartWorkflow {
         TaskType::StartWorkflow.as_ref()
     }
 
-    fn start(&self, _workflow: &WorkflowModel, _task: &TaskModel) -> TegResult<()> {
+    fn start(&self, _workflow: &WorkflowModel, _task: &mut TaskModel) -> TegResult<()> {
         todo!()
     }
 

@@ -61,7 +61,7 @@ impl ExecutionDao {
                 .entry(task.workflow_instance_id.clone())
                 .or_insert(HashMap::default())
                 .insert(task_key.clone(), task.task_id.clone())
-                .is_some();
+                .is_none();
             if !added {
                 debug!(
                     "Task already scheduled, skipping the run {}, ref={}, key={}",

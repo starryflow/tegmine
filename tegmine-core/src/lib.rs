@@ -13,7 +13,8 @@ use std::{collections::HashMap, time::Duration};
 
 pub use model::{TaskModel, TaskStatus, WorkflowModel, WorkflowStatus};
 pub use runtime::{
-    SystemTaskRegistry, TaskMapper, TaskMapperContext, TaskMapperRegistry, WorkflowSystemTask,
+    SystemTaskRegistry, SystemTaskWorkerCoordinator, TaskMapper, TaskMapperContext,
+    TaskMapperRegistry, WorkflowSystemTask,
 };
 pub use service::{ExecutionService, MetadataService, TaskService, WorkflowService};
 use tegmine_common::prelude::{InlineStr, Object};

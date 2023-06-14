@@ -7,7 +7,7 @@ use crate::dao::{
     ConcurrentExecutionLimitDao, ExecutionDao, IndexDao, PollDataDao, QueueDao, RateLimitingDao,
 };
 use crate::metrics::Monitors;
-use crate::model::{TaskModel, TaskSummary, Workflow, WorkflowModel, WorkflowSummary};
+use crate::model::{Task, TaskModel, TaskSummary, Workflow, WorkflowModel, WorkflowSummary};
 use crate::utils::QueueUtils;
 use crate::WorkflowStatus;
 
@@ -184,6 +184,10 @@ impl ExecutionDaoFacade {
     }
 
     // getTask
+    pub fn get_task(task_id: &InlineStr) -> Option<Task> {
+        let task_model = Self::get_task_from_datastore(task_id);
+        task_model.map(|v| v.to_task())
+    }
 
     // getTaskFromDatastore
     fn get_task_from_datastore(task_id: &InlineStr) -> Option<TaskModel> {

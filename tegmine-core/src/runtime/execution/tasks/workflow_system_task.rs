@@ -6,7 +6,7 @@ pub trait WorkflowSystemTask: Send + Sync {
     /// Start the task execution.
     ///
     /// Called only once, and first, when the task status is Scheduled.
-    fn start(&self, _workflow: &WorkflowModel, _task: &TaskModel) -> TegResult<()> {
+    fn start(&self, _workflow: &WorkflowModel, _task: &mut TaskModel) -> TegResult<()> {
         // Do nothing unless overridden by the task implementation
         Ok(())
     }

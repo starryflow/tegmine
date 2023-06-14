@@ -864,7 +864,7 @@ impl WorkflowExecutor {
                     tasks_to_be_queued.push(task_no_cat);
                 }
             }
-            for task in system_task {
+            for mut task in system_task {
                 let workflow_system_task = SystemTaskRegistry::get(&task.task_type)?;
 
                 if !task.status.is_terminal() && task.start_time == 0 {
@@ -873,7 +873,7 @@ impl WorkflowExecutor {
 
                 if !workflow_system_task.is_async() {
                     // start execution of synchronous system tasks
-                    if let Err(e) = workflow_system_task.start(workflow, &task) {
+                    if let Err(e) = workflow_system_task.start(workflow, &mut task) {
                         return fmt_err!(
                             NonTransient,
                             "Unable to start system task: {}, {{id: {}, name: {}}}, error: {}",

@@ -27,7 +27,7 @@ static POOL: Lazy<ThreadPool> = Lazy::new(|| {
     ThreadPoolBuilder::new()
         .pool_size(THREAD_POOL_SIZE)
         .create()
-        .unwrap()
+        .expect("thread pool create failed")
 });
 
 pub static WAITING_QUEUE: Lazy<DashMap<InlineStr, Sender<()>>> = Lazy::new(|| DashMap::new());

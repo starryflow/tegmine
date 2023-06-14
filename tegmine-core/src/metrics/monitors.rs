@@ -3,8 +3,11 @@ use tegmine_common::prelude::*;
 use crate::model::TaskStatus;
 use crate::WorkflowStatus;
 
+pub const NO_DOMAIN: &str = "NO_DOMAIN";
+
 pub struct Monitors;
 
+#[allow(dead_code)]
 impl Monitors {
     pub fn error(class_name: &str, method_name: &str) {}
 
@@ -47,7 +50,15 @@ impl Monitors {
 
     pub fn record_task_poll_error(task_type: &str, domain: &str, exception: &str) {}
 
+    pub fn record_task_poll_error_no_domain(task_type: &str, exception: &str) {
+        Self::record_task_poll_error(task_type, NO_DOMAIN, exception)
+    }
+
     pub fn record_task_poll_count(task_type: &str, domain: &str, count: i32) {}
+
+    pub fn record_task_poll_count_no_domain(task_type: &str, count: i32) {
+        Self::record_task_poll_count(task_type, NO_DOMAIN, count)
+    }
 
     pub fn record_task_response_timeout(task_type: &str) {}
 
@@ -56,4 +67,6 @@ impl Monitors {
     pub fn record_task_pending_time(task_type: &str, workflow_type: &str, duration: i64) {}
 
     pub fn record_queue_wait_time(task_type: &str, queue_wait_time: i64) {}
+
+    pub fn record_system_task_worker_polling_limited(queue_name: &str) {}
 }

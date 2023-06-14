@@ -159,6 +159,15 @@ impl ExecutionService {
         WorkflowExecutor::update_task(task_result)
     }
 
+    pub fn get_task(task_id: &InlineStr) -> Option<Task> {
+        ExecutionDaoFacade::get_task(task_id)
+    }
+
+    pub fn ack_task_received_by_task_id(task_id: &InlineStr) -> bool {
+        let task = Self::get_task(task_id);
+        task.map_or(false, |v| Self::ack_task_received(&v))
+    }
+
     pub fn ack_task_received(task: &Task) -> bool {
         QueueDao::ack(
             &QueueUtils::get_queue_name_by_task_model(&task.inner),
